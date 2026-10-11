@@ -782,6 +782,13 @@
   .bin-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1.5px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px}
   #lockBody input{width:100%;margin-bottom:8px}
   #lockBody .btn{width:100%;margin-bottom:8px}
+
+  /* ওপরের বারের বাটন — সব সমান মাপ */
+  :root[data-view] .bar-btns .theme-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; box-sizing: border-box; width: auto; justify-self: stretch; }
+  :root[data-view="mobile"] .subbar .bar-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  :root[data-view="mobile"] .subbar .bar-btns .theme-btn { width: 100%; padding: 6px 8px; font-size: 0.85rem; }
+  :root[data-view="pc"] .subbar .bar-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: auto; }
+  :root[data-view="pc"] .subbar .bar-btns .theme-btn { min-width: 118px; }
 </style>
 </head>
 <body>
@@ -793,6 +800,7 @@
   <div class="bar-btns">
     <button type="button" class="theme-btn" id="viewBtn"></button>
     <button type="button" class="theme-btn" id="themeBtn"></button>
+    <button type="button" class="theme-btn" id="bkTopBtn">💾 ব্যাকআপ</button>
     <button type="button" class="theme-btn" id="cloudBtn">☁️ ক্লাউড</button>
   </div>
 </div>
@@ -1137,6 +1145,17 @@
   <div id="lockRec" style="display:none;"><input type="text" id="lockRecIn" placeholder="রিকভারি শব্দ" autocomplete="off"><button type="button" class="btn btn-cancel" id="lockRecGo" style="margin-top:8px;width:100%;">লক বন্ধ করুন</button></div>
 </div></div>
 <div class="undo-bar" id="undoBar"></div>
+<div class="modal" id="bkModal"><div class="modal-box"><h2>💾 ব্যাকআপ ও রিস্টোর</h2>
+  <p class="hint" id="bkInfo"></p>
+  <div class="modal-actions">
+    <button type="button" class="btn btn-json" id="bkJson">💾 ব্যাকআপ নিন (ফাইল নামান)</button>
+    <button type="button" class="btn btn-save-inc" id="bkShare">📤 ব্যাকআপ শেয়ার করুন (Drive / WhatsApp / ইমেইল)</button>
+    <button type="button" class="btn btn-import" id="bkRestore">📥 ব্যাকআপ ফেরত আনুন (রিস্টোর)</button>
+    <button type="button" class="btn btn-export" id="bkCsv">📊 Excel/CSV ডাউনলোড</button>
+    <button type="button" class="btn btn-cancel" id="bkClose">বন্ধ করুন</button>
+  </div>
+  <p class="hint" style="margin:10px 0 0;">টিপস: ফাইলটি Google Drive বা নিজের WhatsApp-এ পাঠিয়ে রাখলে ফোন হারালেও হিসাব ফেরত পাবেন।</p>
+</div></div>
 <div class="modal" id="lockModal"><div class="modal-box"><h2>🔒 অ্যাপ লক</h2><div id="lockBody"></div><div class="modal-actions"><button type="button" class="btn btn-cancel" id="lockClose">বন্ধ করুন</button></div></div></div>
 <div class="modal" id="binModal"><div class="modal-box"><h2>🗑 রিসাইকেল বিন</h2><p class="hint">ডিলিট করা জিনিস ৩০ দিন এখানে থাকে, তারপর নিজে থেকে মুছে যায়।</p><div id="binBody"></div><div class="modal-actions" style="margin-top:12px;"><button type="button" class="btn btn-save-exp" id="binEmpty">বিন খালি করুন</button><button type="button" class="btn btn-cancel" id="binClose">বন্ধ করুন</button></div></div></div>
 <div class="modal" id="askModal">
@@ -2098,6 +2117,17 @@
   /* ---------- Export ---------- */
   function csvCell(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }
   function download(blob, name) {
+    if (window.__bkShare && /\.json$/.test(name)) {
+      window.__bkShare = false;
+      try {
+        var sf = new File([blob], name, { type: 'application/json' });
+        if (navigator.canShare && navigator.canShare({ files: [sf] })) {
+          navigator.share({ files: [sf], title: 'Safwan Treats ব্যাকআপ' }).then(function () { if (window.markBackup) window.markBackup(); }, function () {});
+          return;
+        }
+      } catch (e) {}
+      toast('এই ব্রাউজারে সরাসরি শেয়ার চলে না — ফাইল নামানো হচ্ছে');
+    }
     if (/^Safwan-Treats-Backup/.test(name) && window.markBackup) window.markBackup();
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
@@ -4194,6 +4224,23 @@
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }
+
+  /* ---------- ব্যাকআপ মেনু (ওপরের বাটন) ---------- */
+  function bkOpen() {
+    var last = Number(lsGet('safwanTreatsLastBackup')) || 0, el = $('bkInfo');
+    if (last) {
+      var d = Math.floor((Date.now() - last) / 864e5), dt = new Date(last);
+      el.textContent = 'শেষ ব্যাকআপ: ' + dt.getDate() + '/' + (dt.getMonth() + 1) + '/' + dt.getFullYear() + (d > 0 ? ' (' + d + ' দিন আগে)' : ' (আজ)');
+    } else el.textContent = 'এখনো কোনো ব্যাকআপ নেওয়া হয়নি। এখনই একটি নিয়ে রাখুন।';
+    openM('bkModal');
+  }
+  $('bkTopBtn').addEventListener('click', bkOpen);
+  $('bkClose').addEventListener('click', function () { closeM('bkModal'); });
+  $('bkModal').addEventListener('click', function (e) { if (e.target === this) closeM('bkModal'); });
+  $('bkJson').addEventListener('click', function () { closeM('bkModal'); $('jsonBtn').click(); });
+  $('bkShare').addEventListener('click', function () { closeM('bkModal'); window.__bkShare = true; $('jsonBtn').click(); setTimeout(function () { window.__bkShare = false; }, 15000); });
+  $('bkRestore').addEventListener('click', function () { closeM('bkModal'); $('importBtn').click(); });
+  $('bkCsv').addEventListener('click', function () { closeM('bkModal'); $('exportBtn').click(); });
 
   /* ---------- সাপ্তাহিক ব্যাকআপ রিমাইন্ডার ---------- */
   var BK_KEY = 'safwanTreatsLastBackup', BKB_KEY = 'safwanTreatsBkBase', BKS_KEY = 'safwanTreatsBkSnooze';

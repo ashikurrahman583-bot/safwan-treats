@@ -1,6 +1,6 @@
 // Safwan Treats – সার্ভিস ওয়ার্কার (অ্যাপ ফাইল অফলাইনে চালাতে)
 // ফাইল আপডেট করলে নিচের ভার্সন নম্বর বাড়িয়ে দিন (v1 -> v2)
-const CACHE = 'safwan-treats-v2';
+const CACHE = 'safwan-treats-v4';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
