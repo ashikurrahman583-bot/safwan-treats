@@ -1196,7 +1196,7 @@
 }</pre>
           <button type="button" class="btn btn-cancel btn-sm" id="copyRules">📋 Rules কপি করুন</button></li>
         <li><b>Data</b> ট্যাবের ওপরে দেখানো লিংক (https://…firebasedatabase.app) কপি করে নিচের “Database URL” ঘরে বসান।</li>
-        <li>“🎲 নতুন কোড” চেপে কোডটি কোথাও লিখে রাখুন, তারপর “সংযুক্ত করুন” চাপুন। <b>অন্য ডিভাইসে</b> একই URL ও একই কোড দিলেই হিসাব মিলে যাবে।</li>
+        <li>নিজের একটি গোপন কোড (কমপক্ষে ১৬ অক্ষর, ইংরেজি অক্ষর/সংখ্যা) ঠিক করে “সিঙ্ক কোড” ঘরে লিখুন ও কোথাও লিখে রাখুন, তারপর “সংযুক্ত করুন” চাপুন। <b>অন্য ডিভাইসে</b> একই URL ও একই কোড দিলেই হিসাব মিলে যাবে।</li>
       </ol>
       <div class="hint">Firebase-এর মেনুর নাম সময়ের সাথে একটু বদলাতে পারে।</div>
     </details>
@@ -1205,7 +1205,6 @@
     <label class="f" for="syncCode">সিঙ্ক কোড (পাসওয়ার্ডের মতো গোপন রাখুন)</label>
     <div class="code-row">
       <input type="text" id="syncCode" placeholder="কমপক্ষে ১৬ অক্ষর" autocomplete="off" spellcheck="false">
-      <button type="button" class="btn btn-cancel" id="syncGen">🎲 নতুন কোড</button>
     </div>
     <div class="sync-warn">⚠️ যার কাছে URL ও কোড দুটোই থাকবে সে এই হিসাব দেখতে ও বদলাতে পারবে। কাউকে দেবেন না।</div>
     <div class="sync-msg" id="syncMsg"></div>
@@ -3733,7 +3732,7 @@
       syncMsg('Database URL ঠিক নয়। এটি https://…firebaseio.com বা https://…firebasedatabase.app আকারের হবে।'); return;
     }
     if (!/^[A-Za-z0-9_-]{16,64}$/.test(code)) {
-      syncMsg('সিঙ্ক কোড কমপক্ষে ১৬ অক্ষরের (ইংরেজি অক্ষর/সংখ্যা) হতে হবে। “🎲 নতুন কোড” চাপুন।'); return;
+      syncMsg('সিঙ্ক কোড কমপক্ষে ১৬ অক্ষরের (ইংরেজি অক্ষর/সংখ্যা) হতে হবে।'); return;
     }
     syncMsg('সংযোগ করা হচ্ছে…', true);
     cloudGet({ url: url, code: code }).then(function (remote) {
@@ -3767,7 +3766,6 @@
   $('cloudBtn2').addEventListener('click', openSync);
   $('syncClose').addEventListener('click', function () { closeM('syncModal'); });
   $('syncModal').addEventListener('click', function (e) { if (e.target === this) closeM('syncModal'); });
-  $('syncGen').addEventListener('click', function () { $('syncCode').value = randomCode(); });
   $('syncConnect').addEventListener('click', connectCloud);
   $('syncNow').addEventListener('click', function () { runSync(true); });
   $('syncOff').addEventListener('click', function () {
