@@ -4664,6 +4664,13 @@
   function savTrashSig() { return sigList(loadSav()) + '|' + sigTomb(tomb.s) + '|' + sigList(trash.map(trashWrap)) + '|' + sigTomb(tomb.t); }
   window.__cloudTouch = function () { scheduleSync(); };
   window.__cloudSavDel = function (id) { tomb.s = tomb.s || {}; tomb.s[id] = Date.now(); persistLocal(); };
+  /* ডেমো সঞ্চয় চেনা: নোট “(ডেমো)” দিয়ে শুরু, অথবা আইডি ডেমোর নির্দিষ্ট সীমার ভেতরে */
+  function isDemoSav(x) {
+    if (!x) return false;
+    var id = Number(x.id);
+    return String(x.note || '').indexOf('(ডেমো)') === 0 ||
+      (id >= 1791000300000 && id < 1791000400000) || (id >= 1792000300000 && id < 1792000400000);
+  }
   /* ডেমো ডেটা শুধু এই ডিভাইসে থাকে — ক্লাউডে পাঠানো হয় না */
   function nonDemo() {
     var oid = {};
@@ -4672,7 +4679,7 @@
       entries: entries.filter(function (e) { return !(String(e.desc).indexOf('[ডেমো] ') === 0 || (e.orderId && oid[e.orderId])); }),
       orders: orders.filter(function (o) { return !oid[o.id]; }),
       customers: customers.filter(function (c) { return String(c.name).indexOf('(ডেমো) ') !== 0; }),
-      savings: loadSav().filter(function (x) { return String(x.note || '').indexOf('(ডেমো)') !== 0; }),
+      savings: loadSav().filter(function (x) { return !isDemoSav(x); }),
       trash: trash.filter(function (t) { return String(t.label || '').indexOf('ডেমো') < 0; })
     };
   }
@@ -4680,7 +4687,12 @@
     var nd = nonDemo();
     return sigList(nd.entries) + '|' + sigList(nd.orders) + '|' + sigList(nd.customers) + '|' + sigTomb(tomb.e) + '|' + sigTomb(tomb.o) + '|' + sigTomb(tomb.c) + '|' + sigCats(customCats) + '|' + sigList(nd.savings) + '|' + sigTomb(tomb.s) + '|' + sigList(nd.trash.map(trashWrap)) + '|' + sigTomb(tomb.t);
   }
-  function buildPayload() { var nd = nonDemo(); return { v: 4, t: Date.now(), entries: nd.entries, orders: nd.orders, customers: nd.customers, cats: customCats, savings: nd.savings, trash: nd.trash, del: tomb }; }
+  function cleanTomb() {
+    var t = { e: tomb.e, o: tomb.o, c: tomb.c, s: {}, t: tomb.t };
+    for (var k in (tomb.s || {})) { if (!isDemoSav({ id: k })) t.s[k] = tomb.s[k]; }
+    return t;
+  }
+  function buildPayload() { var nd = nonDemo(); return { v: 4, t: Date.now(), entries: nd.entries, orders: nd.orders, customers: nd.customers, cats: customCats, savings: nd.savings.length ? nd.savings : null, trash: nd.trash, del: cleanTomb() }; }
 
   /* ---------- ক্যাশ মেমোর ছবি সিঙ্ক (Firebase: memos / memosDel) ---------- */
   function memoSync() {
@@ -4765,9 +4777,10 @@
       orders: toArr(remote.orders).map(normalizeOrder).filter(Boolean),
       customers: toArr(remote.customers).map(normalizeCustomer).filter(Boolean),
       tE: del.e || {}, tO: del.o || {}, tC: del.c || {}, tS: del.s || {}, tT: del.t || {},
-      savings: toArr(remote.savings).map(normSav).filter(Boolean),
+      savings: toArr(remote.savings).map(normSav).filter(Boolean).filter(function (x) { return !isDemoSav(x); }),
       trash: toArr(remote.trash).map(normTrash).filter(Boolean),
-      cats: remote.cats || {}
+      cats: remote.cats || {},
+      demoInCloud: toArr(remote.savings).map(normSav).filter(Boolean).some(isDemoSav)
     };
   }
   function applyMerge(r) {
@@ -4791,7 +4804,7 @@
     orders.forEach(function (o) { if (o.id > uid) uid = o.id; });
     var after = sigOf();
     var remoteSig = sigList(r.entries) + '|' + sigList(r.orders) + '|' + sigList(r.customers || []) + '|' + sigTomb(r.tE) + '|' + sigTomb(r.tO) + '|' + sigTomb(r.tC || {}) + '|' + sigCats(r.cats) + '|' + sigList(r.savings || []) + '|' + sigTomb(r.tS || {}) + '|' + sigList((r.trash || []).map(trashWrap)) + '|' + sigTomb(r.tT || {});
-    return { localChanged: before !== after, pushNeeded: sigNoDemo() !== remoteSig };
+    return { localChanged: before !== after, pushNeeded: sigNoDemo() !== remoteSig || !!r.demoInCloud };
   }
   function refreshAfterMerge() {
     persistLocal();
@@ -4849,7 +4862,7 @@
       if (e.orderId && omap[e.orderId]) e.orderId = omap[e.orderId];
       keepE.push(e);
     });
-    return { entries: keepE, orders: keepO, customers: r.customers || [], tE: r.tE, tO: r.tO, tC: r.tC || {}, tS: r.tS || {}, tT: r.tT || {}, savings: r.savings || [], trash: r.trash || [], cats: r.cats };
+    return { entries: keepE, orders: keepO, customers: r.customers || [], tE: r.tE, tO: r.tO, tC: r.tC || {}, tS: r.tS || {}, tT: r.tT || {}, savings: r.savings || [], trash: r.trash || [], cats: r.cats, demoInCloud: r.demoInCloud };
   }
 
   function demoOn() {
