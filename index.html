@@ -4852,10 +4852,18 @@
     return { entries: keepE, orders: keepO, customers: r.customers || [], tE: r.tE, tO: r.tO, tC: r.tC || {}, tS: r.tS || {}, tT: r.tT || {}, savings: r.savings || [], trash: r.trash || [], cats: r.cats };
   }
 
+  function demoOn() {
+    try {
+      return orders.some(function (o) { return String(o.customer).indexOf('(ডেমো) ') === 0; }) ||
+        entries.some(function (e) { return String(e.desc).indexOf('[ডেমো] ') === 0; }) ||
+        customers.some(function (c) { return String(c.name).indexOf('(ডেমো) ') === 0; });
+    } catch (e) { return false; }
+  }
+  window.__paintSync = function () { setStatus(syncState.status, syncState.msg); };
   function setStatus(s, msg) {
     syncState.status = s; syncState.msg = msg || '';
     var b = $('cloudBtn');
-    b.textContent = s === 'busy' ? '☁️ সিঙ্ক হচ্ছে…' : s === 'ok' ? '☁️ সিঙ্ক ✓' : s === 'err' ? '☁️ ⚠ সমস্যা' : '☁️ ক্লাউড';
+    b.textContent = s === 'busy' ? '☁️ সিঙ্ক হচ্ছে…' : s === 'ok' ? (syncCfg.on && demoOn() ? '☁️ ডেমো' : '☁️ সিঙ্ক ✓') : s === 'err' ? '☁️ ⚠ সমস্যা' : '☁️ ক্লাউড';
     b.title = s === 'err' ? msg : '';
     paintSyncModal();
   }
@@ -4871,6 +4879,7 @@
     if (!syncCfg.on) txt = '⚪ ক্লাউড সিঙ্ক বন্ধ আছে।';
     else if (s === 'busy') txt = '🔄 সিঙ্ক হচ্ছে…';
     else if (s === 'err') { cls += ' err'; txt = '⚠️ ' + esc(syncState.msg) + (syncCfg.last ? '<br>' + lastText() : ''); }
+    else if (demoOn()) { txt = '🧪 ডেমো ডেটা চালু আছে — ডেমো ডেটা ক্লাউডে যায় না, শুধু এই ডিভাইসে দেখা যাচ্ছে।<br>ডেমো মুছে ফেললে সিঙ্ক আবার স্বাভাবিক দেখাবে।' + (syncCfg.last ? '<br>' + lastText() : ''); }
     else { cls += ' ok'; txt = '✅ সিঙ্ক চালু আছে — প্রতিটি পরিবর্তন নিজে থেকেই ক্লাউডে যাবে।<br>' + lastText(); }
     el.className = cls;
     el.innerHTML = txt;
@@ -5546,6 +5555,7 @@
     var tl = {}; trash.forEach(function (t) { tl[t.label] = 1; });
     S.tr.forEach(function (t) { if (tl[t.label]) return; trash.unshift(t); add.tr++; }); saveTrash(); updBinCnt();
     afterDataChange(); refreshSavTotal();
+    try { if (window.__paintSync) window.__paintSync(); } catch (er) {}
     toast('🧪 প্রচুর ডেমো ডেটা যোগ হয়েছে — ' + add.o + 'টি অর্ডার, ' + add.e + 'টি আয়-খরচ, ' + add.c + 'জন ক্রেতা, ' + add.sv + 'টি সঞ্চয় — সব ট্যাব ঘুরে দেখুন');
   }
   function clearDemo() {
@@ -5560,6 +5570,7 @@
     } catch (er) {}
     trash = trash.filter(function (t) { return String(t.label || '').indexOf('ডেমো') < 0; }); saveTrash(); updBinCnt();
     afterDataChange(); refreshSavTotal();
+    try { if (window.__paintSync) window.__paintSync(); } catch (er) {}
     toast('🧹 ডেমো ডেটা মুছে ফেলা হয়েছে — আপনার আসল ডেটা অক্ষত');
   }
   $('bkDemo').addEventListener('click', function () {
