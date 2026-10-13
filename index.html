@@ -594,7 +594,7 @@
 
   /* ===== নতুন: রঙ ও ডিফল্ট ===== */
   .due-text { color: var(--due); }
-  .dashboard { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+  .dashboard { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
   .dashboard .stat { padding: 16px 14px; }
   .dashboard .stat .value { font-size: 1.5rem; }
   .dashboard .stat .label { font-size: 0.85rem; }
@@ -607,6 +607,10 @@
   .dashboard .stat[data-stat="net"] .label::before { content: "📊"; background: rgba(33, 111, 214, 0.14); }
   .dashboard .stat.due .label::before { content: "⏳"; background: rgba(230, 120, 20, 0.16); }
   .dashboard .stat.sav .label::before { content: "🏦"; background: rgba(31, 157, 107, 0.15); }
+  .dashboard .stat.cake .label::before { content: "🎂"; background: rgba(214, 51, 132, 0.16); }
+  .stat.cake { cursor: pointer; transition: 0.2s; }
+  .stat.cake:hover { transform: translateY(-2px); border-color: var(--pink); }
+  .stat.cake .value { color: #ec4899; }
   :root[data-view="mobile"] .dashboard .stat .label::before { width: 30px; height: 30px; font-size: 1rem; border-radius: 10px; }
   .ck-list { margin: 8px 0; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--card-2); }
   .ck-h { font-weight: 700; color: #b01e68; margin-bottom: 4px; }
@@ -1047,8 +1051,8 @@
   :root[data-view="mobile"] .toast { bottom: 58px; font-size: 0.85rem; padding: 9px 14px; }
 
   /* ===== মোবাইল: ড্যাশবোর্ডের পাঁচটি কার্ড এক লাইনে ===== */
-  :root[data-view="mobile"] .dashboard { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
-  :root[data-view="mobile"] .dashboard .stat, :root[data-view="mobile"] .dashboard .stat.net, :root[data-view="mobile"] .dashboard .stat.due, :root[data-view="mobile"] .dashboard .stat.sav {
+  :root[data-view="mobile"] .dashboard { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+  :root[data-view="mobile"] .dashboard .stat, :root[data-view="mobile"] .dashboard .stat.net, :root[data-view="mobile"] .dashboard .stat.due, :root[data-view="mobile"] .dashboard .stat.sav, :root[data-view="mobile"] .dashboard .stat.cake {
     grid-column: auto; padding: 7px 3px 8px; border-radius: 11px; text-align: center; min-width: 0;
   }
   :root[data-view="mobile"] .dashboard .stat.net { order: -1; border-left-width: 1.5px; }
@@ -1397,6 +1401,11 @@
       <div class="value expense-text" id="totalExpense">৳ 0</div>
       <small class="tap">বিস্তারিত দেখুন ›</small>
     </div>
+    <div class="stat cake" id="cakeStat" role="button" tabindex="0" title="কেকের খরচ হিসাব খুলুন">
+      <div class="label" data-s="কেকের মোট খরচ" data-e="Cake Total Cost">কেকের মোট খরচ (Cake Cost)</div>
+      <div class="value cake-text" id="cakeTotal">৳ 0</div>
+      <small class="tap">খরচ হিসাব করুন ›</small>
+    </div>
     <div class="stat net click" data-stat="net" role="button" tabindex="0" title="বিস্তারিত দেখুন">
       <div class="label" data-s="লাভ/ক্ষতি" data-e="Profit/Loss">চলতি লাভ/ক্ষতি (Net Profit/Loss)</div>
       <div class="value" id="netProfit">৳ 0</div>
@@ -1419,6 +1428,7 @@
   <div class="tabs" id="tabs">
     <button type="button" class="tab active" data-tab="neworder"><span class="ic">➕</span>নতুন অর্ডার</button>
     <button type="button" class="tab" data-tab="expense"><span class="ic">🧾</span>খরচ</button>
+    <button type="button" class="tab" id="cakeCostTab"><span class="ic">🎂</span>কেকের খরচ হিসাব</button>
     <button type="button" class="tab" data-tab="orders"><span class="ic">📦</span>পেন্ডিং অর্ডার<span class="cnt" id="cntOrd">0</span></button>
     <button type="button" class="tab" data-tab="customers"><span class="ic">👥</span>পুরাতন ক্রেতা<span class="cnt" id="cntCust">0</span></button>
     <button type="button" class="tab" data-tab="due"><span class="ic">💳</span>বকেয়া<span class="cnt" id="cntDue">0</span></button>
@@ -5903,6 +5913,299 @@
   load(); render();
 })();
 </script>
+
+<!-- কেকের খরচ হিসাব (ক্যালকুলেটর) -->
+<style>
+  #cakeCostModal .stat-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  #cakeCostModal .stat-head h2 { margin:0; }
+  #cakeCostModal .stat-head .pop-x { margin-left:auto; }
+  .cc-grid, .cc-row { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,.8fr) minmax(0,1.1fr) minmax(0,.9fr) minmax(0,1.1fr) 26px; gap:8px; align-items:center; }
+  .cc-row { padding:10px 0 8px; border-bottom:1px solid var(--border); }
+  .cc-namewrap { display:flex; align-items:center; gap:6px; min-width:0; }
+  .cc-icon { flex:0 0 auto; width:38px; height:38px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; background:var(--card-2); border:1.5px solid var(--border); border-radius:10px; }
+  .cc-namewrap .cc-name { flex:1 1 auto; }
+  .cc-row input, .cc-row select { width:100%; min-width:0; box-sizing:border-box; }
+  .cc-head-row { padding:0 2px 8px; margin-bottom:2px; font-size:0.8rem; font-weight:800; color:var(--pink-dark); border-bottom:2px solid var(--pink); }
+  .cc-sub { grid-column:1; text-align:right; font-weight:800; color:var(--pink-dark); font-size:0.9rem; padding-right:2px; }
+  .cc-per-lbl { display:none; }
+  .cc-del { background:none; border:none; color:var(--muted, #9a8a90); font-size:1.15rem; cursor:pointer; padding:4px 2px; }
+  .cc-del:hover { color:var(--red); }
+  .cc-addrow { background:linear-gradient(135deg,#0f766e,#14b8a6); box-shadow:0 4px 12px rgba(20,184,166,0.3); margin:12px 0 14px; }
+  .cc-total-box { background:var(--card-2); border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; margin:4px 0 14px; }
+  .cc-total-box b { font-size:1.3rem; color:var(--pink-dark); }
+  .toast { z-index: 400 !important; }
+  .cc-saved { margin-top:14px; border-top:1px dashed var(--border); padding-top:10px; }
+  .cc-saved-head { display:flex; justify-content:space-between; align-items:center; gap:10px; background:var(--card-2); border:1.5px solid var(--border); border-radius:14px; padding:10px 14px; margin-bottom:10px; }
+  .cc-saved-head .cc-sh-title { display:flex; align-items:center; gap:8px; font-weight:800; font-size:0.95rem; }
+  .cc-saved-head .cc-sh-count { background:var(--pink); color:#fff; border-radius:999px; font-size:0.74rem; font-weight:800; padding:2px 9px; }
+  .cc-saved-head .cc-sh-sum { display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; }
+  .cc-saved-head .cc-sh-sum small { color:var(--muted); font-size:0.7rem; font-weight:700; }
+  .cc-saved-head .cc-sh-sum span { font-weight:800; font-size:1.1rem; color:var(--pink-dark); }
+  .cc-saved-card { background:var(--card-2); border:1.5px solid var(--border); border-radius:14px; padding:10px 12px; margin-bottom:8px; }
+  .cc-sc-top { display:flex; align-items:flex-start; gap:8px; }
+  .cc-sc-ico { flex:0 0 auto; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.05rem; background:var(--card); border:1.5px solid var(--border); border-radius:9px; }
+  .cc-sc-main { flex:1 1 auto; min-width:0; }
+  .cc-sc-name { display:block; font-weight:800; font-size:0.92rem; line-height:1.35; word-break:break-word; }
+  .cc-sc-date { display:block; color:var(--muted); font-size:0.74rem; margin-top:1px; }
+  .cc-sc-amt { flex:0 0 auto; font-weight:800; font-size:1rem; color:var(--pink-dark); white-space:nowrap; padding-top:1px; }
+  .cc-saved-card .cc-saved-del { flex:0 0 auto; align-self:flex-start; }
+  .cc-sc-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
+  .cc-chip { background:var(--card); border:1px solid var(--border); border-radius:999px; padding:2px 9px; font-size:0.74rem; color:var(--muted); font-weight:700; }
+  #cakeCostModal[data-mode="saved"] #ccCalc, #cakeCostModal[data-mode="saved"] #ccIntro { display:none; }
+  #cakeCostModal[data-mode="saved"] .cc-saved { margin-top:6px; border-top:none; padding-top:0; }
+  #cakeCostModal:not([data-mode="saved"]) .cc-saved { display:none; }
+  #cakeCostModal .actions { flex-wrap:nowrap; gap:6px; }
+  #cakeCostModal .actions .btn { flex:1 1 0; min-width:0; padding:10px 4px; font-size:0.8rem; line-height:1.3; text-align:center; white-space:normal; }
+  @media (max-width:420px) { #cakeCostModal .actions .btn { font-size:0.72rem; padding:9px 2px; } }
+  :root[data-view="mobile"] .dashboard .stat { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+  :root[data-view="mobile"] .dashboard .stat .label, :root[data-view="mobile"] .dashboard .stat.net .label { width:100%; text-align:center; }
+  :root[data-view="mobile"] .dashboard .stat .value, :root[data-view="mobile"] .dashboard .stat.net .value { margin-top:auto; padding-top:9px; width:100%; text-align:center; }
+  .cc-price-box { background:var(--card-2); border:1.5px solid var(--border); border-radius:14px; padding:12px 14px; margin:0 0 14px; }
+  .cc-price-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .cc-price-row label { font-weight:800; font-size:0.9rem; white-space:nowrap; }
+  .cc-price-row input { flex:1 1 auto; min-width:0; max-width:190px; text-align:right; }
+  .cc-profit-row { margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); font-size:0.88rem; }
+  .cc-profit-row > b { font-size:1.2rem; color:var(--muted); }
+  .cc-price-note { display:block; margin-top:6px; color:var(--muted); font-size:0.72rem; }
+  .cc-saved-empty { color:var(--muted); font-size:0.84rem; text-align:center; padding:16px 8px; border:1.5px dashed var(--border); border-radius:14px; }
+  @media (max-width:560px) {
+    .cc-head-row { display:none; }
+    .cc-row { grid-template-columns:1fr 1fr 28px; }
+    .cc-row .cc-namewrap { grid-column:1 / 3; }
+    .cc-row .cc-del { grid-column:3; grid-row:1; }
+    .cc-row .cc-qty { grid-column:1; }
+    .cc-row .cc-unit { grid-column:2 / 4; }
+    .cc-row .cc-rate { grid-column:1; }
+    .cc-row .cc-per-wrap { grid-column:2 / 4; }
+    .cc-per-wrap { display:flex; align-items:center; gap:6px; }
+    .cc-per-lbl { display:inline; font-size:0.8rem; font-weight:800; color:var(--pink-dark); }
+    .cc-sub { grid-column:1 / 3; }
+  }
+</style>
+<div class="modal" id="cakeCostModal"><div class="modal-box stat-box">
+  <div class="stat-fixed">
+    <div class="stat-head"><h2 id="ccTitle">🎂 কেকের খরচ হিসাব</h2><button type="button" class="pop-x" id="ccClose" aria-label="বন্ধ করুন">✕</button></div>
+    <p class="hint" id="ccIntro" style="margin:0;">কেক বানাতে কী কী উপকরণ (ডিম, আটা, ময়দা, চিনি, তেল ইত্যাদি) কী পরিমাণে লেগেছে লিখুন, সাথে দর ও “প্রতি” একক দিন (যেমন ময়দা ২৫০ গ্রাম, দর ৭০ প্রতি কেজি) — গ্রাম/কেজি ও মিলি/লিটার নিজে থেকেই মিলিয়ে মোট খরচ হিসাব হয়ে যাবে।</p>
+  </div>
+  <div class="stat-scroll" id="ccScroll">
+   <div id="ccCalc">
+    <input type="text" id="ccCakeName" class="full" placeholder="কেকের নাম, কাস্টমারের নাম (ঐচ্ছিক)" autocomplete="off" style="margin:12px 0;">
+    <div class="cc-head-row cc-grid">
+      <span>উপকরণ</span>
+      <span>ব্যবহার</span>
+      <span>একক</span>
+      <span>দাম/দর (৳)</span>
+      <span>প্রতি</span>
+      <span></span>
+    </div>
+    <div id="ccRows"></div>
+    <button type="button" class="btn cc-addrow" id="ccAddRow">➕ আরেকটি উপকরণ যোগ করুন</button>
+    <div class="cc-total-box"><span>মোট খরচ</span><b id="ccTotal">৳ 0</b></div>
+    <div class="cc-price-box">
+      <div class="cc-price-row"><label for="ccPrice">🎂 কেকের দাম (৳)</label><input type="text" id="ccPrice" inputmode="decimal" autocomplete="off" placeholder="কেক কত টাকায় বিক্রি" aria-label="কেকের দাম"></div>
+      <div class="cc-price-row cc-profit-row"><span>কেকের দাম − মোট খরচ = <b id="ccProfitLbl">লাভ</b></span><b id="ccProfit">৳ 0</b></div>
+      <small class="cc-price-note">এই হিসাব শুধু দেখার জন্য — কোথাও সেভ হয় না।</small>
+    </div>
+    <div class="form-msg" id="ccMsg"></div>
+    <div class="actions">
+      <button type="button" class="btn btn-save-exp" id="ccAddTotal">🎂 কেকের মোট খরচে যোগ করুন</button>
+      <button type="button" class="btn btn-cancel" id="ccReset">🔄 রিসেট করুন</button>
+      <button type="button" class="btn" id="ccViewTotal" style="background:linear-gradient(135deg,#0f766e,#14b8a6);box-shadow:0 4px 12px rgba(20,184,166,0.3);">📒 কেকের মোট খরচ দেখুন</button>
+    </div>
+    <p class="hint" style="margin-top:10px;">“কেকের মোট খরচে যোগ করুন” চাপলে এই হিসাবের মোট টাকা ড্যাশবোর্ডের “কেকের মোট খরচ” কার্ডে যোগ হয়ে যাবে।</p>
+   </div>
+    <div class="cc-saved">
+      <button type="button" class="btn cc-addrow" id="ccGoCalc" style="width:100%;margin-top:4px;">🧮 নতুন হিসাব করুন</button>
+      <div class="cc-saved-head"><div class="cc-sh-title">📒 সংরক্ষিত হিসাব <span class="cc-sh-count" id="ccSavedCount">০টি</span></div><div class="cc-sh-sum"><small>সব মিলিয়ে মোট</small><span id="ccSavedSum">৳ 0</span></div></div>
+      <div id="ccSavedList"></div>
+    </div>
+  </div>
+</div></div>
+<datalist id="ccIngList">
+  <option value="ডিম"><option value="আটা"><option value="ময়দা"><option value="চিনি"><option value="তেল">
+  <option value="মাখন/বাটার"><option value="দুধ"><option value="কোকো পাউডার"><option value="বেকিং পাউডার">
+  <option value="বেকিং সোডা"><option value="ভ্যানিলা এসেন্স"><option value="চকলেট"><option value="হুইপড ক্রিম">
+  <option value="ফুড কালার"><option value="কনডেন্সড মিল্ক"><option value="দই"><option value="প্যাকেজিং বক্স">
+</datalist>
+<script>
+(function () {
+  var KEY = 'safwanTreatsCakeCost_v1';
+  function $(i) { return document.getElementById(i); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function num(s) { s = String(s == null ? '' : s).replace(/[০-৯]/g, function (c) { return '০১২৩৪৫৬৭৮৯'.indexOf(c); }).replace(/[,\s৳]/g, ''); var n = parseFloat(s); return isFinite(n) ? n : 0; }
+  function fmt(n) { return '৳ ' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function cakeToast(msg) {
+    var el = $('toast'); if (!el) return;
+    el.textContent = msg; el.className = 'toast show';
+    clearTimeout(cakeToast._t);
+    cakeToast._t = setTimeout(function () { el.className = 'toast'; }, 2600);
+  }
+  var UNITS = ['গ্রাম','কেজি','মিলি','লিটার','পিস','কাপ','টেবিল চামচ','চা চামচ','প্যাকেট'];
+  var ICONS = { 'ডিম':'🥚','আটা':'🌾','ময়দা':'🌾','চিনি':'🍬','তেল':'🛢️','মাখন':'🧈','বাটার':'🧈','দুধ':'🥛','কোকো পাউডার':'🍫','বেকিং পাউডার':'🧂','বেকিং সোডা':'🧂','ভ্যানিলা এসেন্স':'🧴','চকলেট':'🍫','হুইপড ক্রিম':'🍦','ফুড কালার':'🎨','কনডেন্সড মিল্ক':'🥫','দই':'🥣','প্যাকেজিং বক্স':'📦','প্যাকেজিং':'📦','বক্স':'📦','বোর্ড':'🟫' };
+  var DEFAULT_ITEMS = [['ডিম','','পিস','','পিস'],['আটা','','গ্রাম','','কেজি'],['চিনি','','গ্রাম','','কেজি'],['হুইপড ক্রিম','','গ্রাম','','কেজি'],['বেকিং পাউডার','','গ্রাম','','কেজি'],['বোর্ড','','পিস','','পিস'],['প্যাকেজিং','','পিস','','পিস']];
+  var FACTOR = { 'গ্রাম':['w',1], 'কেজি':['w',1000], 'মিলি':['v',1], 'লিটার':['v',1000] };
+  function conv(use, per) {
+    var a = FACTOR[use], b = FACTOR[per];
+    if (a && b && a[0] === b[0]) return a[1] / b[1];
+    return 1;
+  }
+  function calc(r) { return num(r.qty) * num(r.rate) * conv(r.unit, r.per); }
+  var rows = [], rid = 1;
+  function iconFor(name) {
+    name = (name || '').trim();
+    if (!name) return '🧾';
+    for (var k in ICONS) { if (name.indexOf(k) > -1) return ICONS[k]; }
+    return '🧁';
+  }
+  function blankRow() { return { id: rid++, name: '', qty: '', unit: 'গ্রাম', rate: '', per: 'কেজি' }; }
+  function defaultRows() { return DEFAULT_ITEMS.map(function (it) { return { id: rid++, name: it[0], qty: it[1], unit: it[2], rate: it[3], per: it[4] }; }); }
+
+  function load() {
+    try {
+      var d = JSON.parse(localStorage.getItem(KEY) || 'null');
+      /* উপকরণের নাম সবসময় স্থায়ী ডিফল্ট তালিকা থেকে আসে; সেভ করা পুরনো সারি লোড হয় না */
+    } catch (e) {}
+    rows = defaultRows();
+  }
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify({ cakeName: $('ccCakeName').value, rows: rows })); } catch (e) {}
+  }
+  function unitOptions(sel) {
+    return UNITS.map(function (u) { return '<option' + (u === sel ? ' selected' : '') + '>' + u + '</option>'; }).join('');
+  }
+  function rowHtml(r) {
+    return '<div class="cc-row" data-rid="' + r.id + '">' +
+      '<span class="cc-namewrap"><span class="cc-icon">' + iconFor(r.name) + '</span><input type="text" class="cc-name" list="ccIngList" placeholder="যেমন: মাখন" autocomplete="off" value="' + esc(r.name) + '"></span>' +
+      '<input type="text" class="cc-qty" inputmode="decimal" autocomplete="off" aria-label="ব্যবহার" value="' + esc(r.qty) + '">' +
+      '<select class="cc-unit" aria-label="একক">' + unitOptions(r.unit) + '</select>' +
+      '<input type="text" class="cc-rate" inputmode="decimal" autocomplete="off" aria-label="দাম/দর (৳)" placeholder="দর ৳" value="' + esc(r.rate) + '">' +
+      '<span class="cc-per-wrap"><span class="cc-per-lbl">প্রতি</span><select class="cc-per" aria-label="প্রতি">' + unitOptions(r.per) + '</select></span>' +
+      '<button type="button" class="cc-del" title="মুছুন" aria-label="মুছুন">✕</button>' +
+      '<span class="cc-sub">' + fmt(calc(r)) + '</span></div>';
+  }
+  function total() { return rows.reduce(function (t, r) { return t + calc(r); }, 0); }
+  function updProfit() {
+    var inp = $('ccPrice'); if (!inp) return;
+    var has = String(inp.value).trim() !== '';
+    var d = num(inp.value) - total();
+    var el = $('ccProfit');
+    el.textContent = has ? ((d < 0 ? '-' : '') + fmt(Math.abs(d))) : '৳ 0';
+    el.style.color = !has ? '' : (d < 0 ? 'var(--red)' : '#22c55e');
+    $('ccProfitLbl').textContent = d < 0 ? 'ক্ষতি' : 'লাভ';
+  }
+  function render() { $('ccRows').innerHTML = rows.map(rowHtml).join(''); $('ccTotal').textContent = fmt(total()); updProfit(); }
+
+  function syncRowFromDom(el) {
+    var box = el.closest('.cc-row'); if (!box) return;
+    var id = Number(box.getAttribute('data-rid'));
+    var r = rows.filter(function (x) { return x.id === id; })[0]; if (!r) return;
+    r.name = box.querySelector('.cc-name').value;
+    r.qty = box.querySelector('.cc-qty').value;
+    r.unit = box.querySelector('.cc-unit').value;
+    r.rate = box.querySelector('.cc-rate').value;
+    r.per = box.querySelector('.cc-per').value;
+    box.querySelector('.cc-icon').textContent = iconFor(r.name);
+    box.querySelector('.cc-sub').textContent = fmt(calc(r));
+    $('ccTotal').textContent = fmt(total());
+    updProfit();
+    persist();
+  }
+
+  function setMode(mode) {
+    $('cakeCostModal').setAttribute('data-mode', mode);
+    $('ccTitle').textContent = mode === 'saved' ? '📒 কেকের মোট খরচ' : '🎂 কেকের খরচ হিসাব';
+  }
+  function open(mode) {
+    mode = mode === 'saved' ? 'saved' : 'calc';
+    setMode(mode);
+    if (mode === 'calc') { rows = defaultRows(); $('ccCakeName').value = ''; $('ccPrice').value = ''; render(); $('ccMsg').textContent = ''; }
+    renderTotals();
+    $('cakeCostModal').className = 'modal show';
+  }
+  function close() { persist(); $('cakeCostModal').className = 'modal'; }
+
+  $('cakeCostTab').addEventListener('click', function (e) { e.stopPropagation(); open('calc'); });
+  $('cakeStat').addEventListener('click', function () { open('saved'); });
+  $('cakeStat').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open('saved'); } });
+  $('ccPrice').addEventListener('input', updProfit);
+  $('ccClose').addEventListener('click', close);
+  $('ccViewTotal').addEventListener('click', function () { persist(); open('saved'); try { $('ccScroll').scrollTop = 0; } catch (e) {} });
+  $('ccGoCalc').addEventListener('click', function () { open('calc'); try { $('ccScroll').scrollTop = 0; } catch (e) {} });
+  $('cakeCostModal').addEventListener('click', function (e) { if (e.target === this) close(); });
+  $('ccAddRow').addEventListener('click', function () { rows.push(blankRow()); render(); persist(); });
+  $('ccRows').addEventListener('input', function (e) {
+    if (e.target.classList.contains('cc-name') || e.target.classList.contains('cc-qty') || e.target.classList.contains('cc-rate')) syncRowFromDom(e.target);
+  });
+  $('ccRows').addEventListener('change', function (e) { if (e.target.classList.contains('cc-unit') || e.target.classList.contains('cc-per')) syncRowFromDom(e.target); });
+  $('ccRows').addEventListener('click', function (e) {
+    var b = e.target.closest('.cc-del'); if (!b) return;
+    var box = b.closest('.cc-row'); var id = Number(box.getAttribute('data-rid'));
+    rows = rows.filter(function (x) { return x.id !== id; });
+    if (!rows.length) rows.push(blankRow());
+    render(); persist();
+  });
+  $('ccCakeName').addEventListener('input', persist);
+  $('ccReset').addEventListener('click', function () {
+    rows = defaultRows(); $('ccCakeName').value = ''; $('ccPrice').value = '';
+    render(); persist();
+    try { $('ccCakeName').scrollIntoView({ block: 'center' }); } catch (e) {}
+    cakeToast('🔄 রিসেট হয়েছে — উপকরণের নাম আগের মতোই আছে');
+  });
+  var TKEY = 'safwanTreatsCakeTotals_v1';
+  var totals = [];
+  function loadTotals() {
+    try { var d = JSON.parse(localStorage.getItem(TKEY) || '[]'); totals = Array.isArray(d) ? d.filter(function (x) { return x && isFinite(Number(x.amount)); }) : []; } catch (e) { totals = []; }
+  }
+  function saveTotals() { try { localStorage.setItem(TKEY, JSON.stringify(totals)); } catch (e) {} }
+  function sumTotals() { return totals.reduce(function (t, x) { return t + Number(x.amount || 0); }, 0); }
+  function renderTotals() {
+    var sum = fmt(sumTotals());
+    $('cakeTotal').textContent = sum;
+    $('ccSavedSum').textContent = sum;
+    var cnt = $('ccSavedCount'); if (cnt) cnt.textContent = Number(totals.length).toLocaleString('bn-BD') + 'টি';
+    $('ccSavedList').innerHTML = totals.length ? totals.slice().reverse().map(function (x) {
+      var chips = String(x.items || '').split(', ').filter(Boolean).map(function (c) { return '<span class="cc-chip">' + esc(c) + '</span>'; }).join('');
+      return '<div class="cc-saved-card" data-tid="' + esc(x.id) + '">' +
+        '<div class="cc-sc-top"><span class="cc-sc-ico">🎂</span>' +
+        '<span class="cc-sc-main"><span class="cc-sc-name">' + esc(x.name || 'কেক') + '</span>' + (x.date ? '<span class="cc-sc-date">📅 ' + esc(x.date) + '</span>' : '') + '</span>' +
+        '<b class="cc-sc-amt">' + fmt(x.amount) + '</b>' +
+        '<button type="button" class="cc-del cc-saved-del" title="মুছুন" aria-label="মুছুন">✕</button></div>' +
+        (chips ? '<div class="cc-sc-chips">' + chips + '</div>' : '') + '</div>';
+    }).join('') : '<div class="cc-saved-empty">🍰 এখনও কোনো হিসাব যোগ করা হয়নি।<br>উপরে উপকরণ লিখে “কেকের মোট খরচে যোগ করুন” চাপুন।</div>';
+  }
+  $('ccAddTotal').addEventListener('click', function () {
+    var t = total();
+    var used = rows.filter(function (r) { return r.name && r.name.trim() && num(r.qty) > 0; });
+    if (!used.length || !(t > 0)) {
+      $('ccMsg').style.color = 'var(--red)';
+      $('ccMsg').textContent = 'অন্তত একটি উপকরণের নাম, পরিমাণ ও দর দিন।';
+      return;
+    }
+    $('ccMsg').textContent = '';
+    var nameTxt = ($('ccCakeName').value || '').trim();
+    totals.push({
+      id: 'ct' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+      name: nameTxt || used.map(function (r) { return r.name.trim(); }).slice(0, 3).join(', '),
+      date: new Date().toLocaleDateString('bn-BD'),
+      items: used.map(function (r) { return r.name.trim() + ' ' + r.qty + ' ' + r.unit; }).join(', '),
+      amount: Math.round(t * 100) / 100
+    });
+    saveTotals(); renderTotals();
+    close();
+    cakeToast('✅ ' + fmt(t) + ' কেকের মোট খরচে যোগ হয়েছে');
+  });
+  $('ccSavedList').addEventListener('click', function (e) {
+    var b = e.target.closest('.cc-saved-del'); if (!b) return;
+    var id = b.closest('.cc-saved-card').getAttribute('data-tid');
+    totals = totals.filter(function (x) { return String(x.id) !== id; });
+    saveTotals(); renderTotals();
+  });
+
+  load();
+  loadTotals(); renderTotals();
+})();
+</script>
+
 <script>
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
