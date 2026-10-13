@@ -1642,9 +1642,11 @@
     };
   };
   try {
-    var force = /[?&]demo=1(&|$)/.test(location.search);
     function has(k) { try { var v = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(v) && v.length > 0; } catch (e) { return false; } }
-    if (!force && (has('safwanTreatsData_v1') || has('safwanTreatsOrders_v1') || has('safwanTreatsCust_v1'))) return;
+    function hasSync() { try { var o = JSON.parse(localStorage.getItem('safwanTreatsSync_v1') || '{}'); return !!(o && o.url && o.code); } catch (e) { return false; } }
+    function hasLock() { try { return !!localStorage.getItem('safwanTreatsLock_v1'); } catch (e) { return false; } }
+    /* আসল ডেটা, সঞ্চয়, বিন, সিঙ্ক সেটিং বা PIN লক থাকলে ডেমো কিছুই ছোঁবে না (?demo=1 দিলেও না) */
+    if (has('safwanTreatsData_v1') || has('safwanTreatsOrders_v1') || has('safwanTreatsCust_v1') || has('safwanTreatsSavings_v1') || has('safwanTreatsTrash_v1') || hasSync() || hasLock()) return;
     var S = window.__demoSeed();
     localStorage.setItem('safwanTreatsData_v1', JSON.stringify(S.e));
     localStorage.setItem('safwanTreatsOrders_v1', JSON.stringify(S.o));
@@ -1652,9 +1654,6 @@
     localStorage.setItem('safwanTreatsCats_v1', JSON.stringify(S.k));
     localStorage.setItem('safwanTreatsSavings_v1', JSON.stringify(S.sv));
     localStorage.setItem('safwanTreatsTrash_v1', JSON.stringify(S.tr));
-    localStorage.removeItem('safwanTreatsDel_v1');
-    localStorage.removeItem('safwanTreatsLock_v1');
-    localStorage.removeItem('safwanTreatsSync_v1');
   } catch (e) {}
 })();
 </script>
@@ -1703,6 +1702,9 @@
     return parseFloat(s);
   }
   function fmt(n) { return '৳ ' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function okImg(u) {
+    return typeof u === 'string' && /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(u);
+  }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -1771,7 +1773,7 @@
       status: (x.status === 'delivered' || x.status === 'cancelled') ? x.status : 'pending',
       created: x.created ? normDate(x.created) : today(),
       waived: Math.max(0, Number(x.waived) || 0),
-      cph: Array.isArray(x.cph) ? x.cph.filter(function (s) { return typeof s === 'string' && s.indexOf('data:image') === 0; }).slice(0, 3) : [],
+      cph: Array.isArray(x.cph) ? x.cph.filter(okImg).slice(0, 3) : [],
       cphSent: Math.max(0, Number(x.cphSent) || 0),
       no: Math.max(0, Math.floor(Number(x.no)) || 0),
       u: Number(x.u) || 0
@@ -1785,7 +1787,7 @@
     var S = function (v) { return String(v == null ? '' : v).trim(); };
     var ph = x.photos;
     if (ph && !Array.isArray(ph) && typeof ph === 'object') ph = Object.keys(ph).map(function (k) { return ph[k]; });
-    ph = Array.isArray(ph) ? ph.filter(function (u) { return typeof u === 'string' && u.indexOf('data:image/') === 0; }).slice(0, 3) : [];
+    ph = Array.isArray(ph) ? ph.filter(okImg).slice(0, 3) : [];
     return { id: Number(x.id) || newId(), name: name, phone: S(x.phone), addr: S(x.addr), fb: S(x.fb), note: S(x.note), photos: ph, u: Number(x.u) || 0 };
   }
 
@@ -1815,16 +1817,23 @@
     customers.forEach(function (c) { if (!c.u) c.u = c.id; if (c.id > uid) uid = c.id; });
   }
   function persistLocal() {
+    var kv = [[STORAGE_KEY, entries], [ORD_KEY, orders], [CUST_KEY, customers], [TOMB_KEY, tomb]], old = {}, i;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-      localStorage.setItem(ORD_KEY, JSON.stringify(orders));
-      localStorage.setItem(CUST_KEY, JSON.stringify(customers));
-      localStorage.setItem(TOMB_KEY, JSON.stringify(tomb));
+      /* আগে সব JSON তৈরি করি, তারপর পুরোনো মান সংরক্ষণ করে লিখি */
+      var js = kv.map(function (p) { return JSON.stringify(p[1]); });
+      for (i = 0; i < kv.length; i++) old[kv[i][0]] = localStorage.getItem(kv[i][0]);
+      for (i = 0; i < kv.length; i++) localStorage.setItem(kv[i][0], js[i]);
       return true;
-    } catch (e) { return false; }
+    } catch (e) {
+      /* মাঝপথে ব্যর্থ হলে আগের অবস্থায় ফিরিয়ে দিই — যেন কিছু key নতুন আর কিছু পুরোনো না থাকে */
+      Object.keys(old).forEach(function (k) {
+        try { if (old[k] === null) localStorage.removeItem(k); else localStorage.setItem(k, old[k]); } catch (_) {}
+      });
+      return false;
+    }
   }
   function saveData() {
-    if (!persistLocal()) showMsg('ডেটা সেভ করা যায়নি! ব্রাউজারের স্টোরেজ বন্ধ থাকতে পারে।');
+    if (!persistLocal()) showMsg('ডেটা সেভ করা যায়নি! স্টোরেজ ভরে গেছে বা বন্ধ আছে — এখনই ব্যাকআপ (JSON) নিন এবং পুরোনো ছবি মুছুন।');
     scheduleSync();
   }
   function loadCats() {
@@ -2394,7 +2403,7 @@
     }).catch(function () { toast('⚠️ মেমোর ছবি সেভ করা যায়নি'); });
   }
   function memoImport(eid, arr) {
-    var list = (Array.isArray(arr) ? arr : []).filter(function (d) { return typeof d === 'string' && d.indexOf('data:image/') === 0; }).slice(0, 6);
+    var list = (Array.isArray(arr) ? arr : []).filter(okImg).slice(0, 6);
     if (!list.length) return;
     memoIds[eid] = (memoIds[eid] || 0) + list.length;
     memoReq('readwrite', function (os) {
@@ -2431,10 +2440,10 @@
     var st = memoState, h = '';
     st.old.forEach(function (m) {
       if (st.del.indexOf(m.k) >= 0) return;
-      h += '<div class="memo-th"><img src="' + m.data + '" alt="মেমো" data-mv="1"><button type="button" class="memo-x" data-mx="o' + m.k + '" aria-label="মুছুন">✕</button></div>';
+      h += '<div class="memo-th"><img src="' + esc(m.data) + '" alt="মেমো" data-mv="1"><button type="button" class="memo-x" data-mx="o' + m.k + '" aria-label="মুছুন">✕</button></div>';
     });
     st.add.forEach(function (d, i) {
-      h += '<div class="memo-th"><img src="' + d + '" alt="মেমো" data-mv="1"><button type="button" class="memo-x" data-mx="n' + i + '" aria-label="মুছুন">✕</button></div>';
+      h += '<div class="memo-th"><img src="' + esc(d) + '" alt="মেমো" data-mv="1"><button type="button" class="memo-x" data-mx="n' + i + '" aria-label="মুছুন">✕</button></div>';
     });
     $('memoThumbs').innerHTML = h;
   }
@@ -2460,7 +2469,7 @@
   function memoView(srcs, title) {
     $('memoViewTitle').textContent = '📎 ' + (title || 'ক্যাশ মেমো');
     $('memoViewBody').innerHTML = srcs.map(function (d, i) {
-      return '<div class="memo-vi"><img src="' + d + '" alt="ক্যাশ মেমো"><a class="btn btn-sm btn-json" href="' + d + '" download="cash-memo-' + (i + 1) + '.jpg">⬇️ ডাউনলোড</a></div>';
+      return '<div class="memo-vi"><img src="' + esc(d) + '" alt="ক্যাশ মেমো"><a class="btn btn-sm btn-json" href="' + esc(d) + '" download="cash-memo-' + (i + 1) + '.jpg">⬇️ ডাউনলোড</a></div>';
     }).join('');
     $('memoModal').className = 'modal show';
   }
@@ -2504,10 +2513,10 @@
     var st = cakeState, h = '';
     st.old.forEach(function (m) {
       if (st.del.indexOf(m.k) >= 0) return;
-      h += '<div class="memo-th"><img src="' + m.data + '" alt="কেক" data-mv="1"><button type="button" class="memo-x" data-mx="o' + m.k + '" aria-label="মুছুন">✕</button></div>';
+      h += '<div class="memo-th"><img src="' + esc(m.data) + '" alt="কেক" data-mv="1"><button type="button" class="memo-x" data-mx="o' + m.k + '" aria-label="মুছুন">✕</button></div>';
     });
     st.add.forEach(function (d, i) {
-      h += '<div class="memo-th"><img src="' + d + '" alt="কেক" data-mv="1"><button type="button" class="memo-x" data-mx="n' + i + '" aria-label="মুছুন">✕</button></div>';
+      h += '<div class="memo-th"><img src="' + esc(d) + '" alt="কেক" data-mv="1"><button type="button" class="memo-x" data-mx="n' + i + '" aria-label="মুছুন">✕</button></div>';
     });
     $('cakeThumbs').innerHTML = h;
   }
@@ -3121,7 +3130,7 @@
     h += '<div class="oc2-sec sec-ord"><div class="oc2-lbl">🎂 অর্ডার</div><div class="oc2-item">' + esc(o.item) + '</div>';
     if (o.note) h += '<div class="oc2-note">📝 ' + esc(o.note) + '</div>';
     if (memoIds[o.id]) h += '<div class="oc-meta"><button type="button" class="memo-chip" data-memo="' + o.id + '" style="margin-left:0;">🎂 কেকের ছবি (' + memoIds[o.id] + ')</button></div>';
-    if (o.cph && o.cph.length) h += '<div class="cph-row">' + o.cph.map(function (u, i) { return '<span class="cph"><img src="' + u + '" alt="কেকের ছবি" data-zoom="1"><button type="button" data-cact="rmph" data-id="' + o.id + '" data-i="' + i + '" aria-label="ছবি মুছুন">✕</button></span>'; }).join('') + '</div>';
+    if (o.cph && o.cph.length) h += '<div class="cph-row">' + o.cph.map(function (u, i) { return '<span class="cph"><img src="' + esc(u) + '" alt="কেকের ছবি" data-zoom="1"><button type="button" data-cact="rmph" data-id="' + o.id + '" data-i="' + i + '" aria-label="ছবি মুছুন">✕</button></span>'; }).join('') + '</div>';
     h += '</div>';
     /* ৩. ডেলিভারি */
     h += '<div class="oc2-sec sec-del"><div class="oc2-lbl">🗓️ ডেলিভারি</div><div class="oc2-row">' + esc(o.delivery) + ' (' + WD[dow(o.delivery)] + ')' + (o.time ? ' · ⏰ ' + fmtTime(o.time) : '') +
@@ -3630,7 +3639,7 @@
   }
   function paintCustPhotos() {
     $('custPhotoBox').innerHTML = custPhotos.map(function (u, i) {
-      return '<span class="cph"><img src="' + u + '" alt="ছবি" data-zoom="1"><button type="button" data-rmph="' + i + '" aria-label="ছবি মুছুন">✕</button></span>';
+      return '<span class="cph"><img src="' + esc(u) + '" alt="ছবি" data-zoom="1"><button type="button" data-rmph="' + i + '" aria-label="ছবি মুছুন">✕</button></span>';
     }).join('');
     $('custPhotoBtn').style.display = custPhotos.length >= 3 ? 'none' : '';
   }
@@ -3659,7 +3668,7 @@
     var box = $('ordPhThumbs');
     if (!box) return;
     box.innerHTML = ordPhotos.map(function (u, i) {
-      return '<span class="cph"><img src="' + u + '" alt="ছবি" data-zoom="1"><button type="button" data-rmoph="' + i + '" aria-label="ছবি মুছুন">✕</button></span>';
+      return '<span class="cph"><img src="' + esc(u) + '" alt="ছবি" data-zoom="1"><button type="button" data-rmoph="' + i + '" aria-label="ছবি মুছুন">✕</button></span>';
     }).join('');
     var full = ordPhotos.length >= 3;
     $('ordPhCamBtn').style.display = full ? 'none' : '';
@@ -3695,7 +3704,7 @@
   var custOpen = {};
   function custCard(x) {
     var c = x.c, wa = c.phone ? waNumber(c.phone) : '';
-    var av = (c.photos && c.photos.length) ? '<img class="crow-av" src="' + c.photos[0] + '" alt="">' : '<span class="crow-av">' + esc(Array.from(c.name)[0] || '?') + '</span>';
+    var av = (c.photos && c.photos.length) ? '<img class="crow-av" src="' + esc(c.photos[0]) + '" alt="">' : '<span class="crow-av">' + esc(Array.from(c.name)[0] || '?') + '</span>';
     var h = '<details class="crow' + (x.bal > 0 ? ' late' : '') + '" data-cid="' + c.id + '"' + (custOpen[c.id] ? ' open' : '') + '>';
     h += '<summary class="crow-sum">' + av + '<span class="crow-nm"><b>' + (x.n >= 3 ? '⭐ ' : '') + esc(c.name) + '</b>' + (c.phone ? ' <small>📞 ' + esc(c.phone) + '</small>' : '') + '</span>' +
       '<span class="crow-meta"><span class="badge b-soon">' + x.n + 'টি অর্ডার</span>' +
@@ -3705,11 +3714,11 @@
     var ckSet = {};
     ckOrders.forEach(function (v) { v.o.cph.forEach(function (u) { ckSet[u] = 1; }); });
     var restPh = (c.photos || []).filter(function (u) { return !ckSet[u]; });
-    if (restPh.length) h += '<div class="cph-row">' + restPh.map(function (u) { return '<img src="' + u + '" alt="ছবি" data-zoom="1">'; }).join('') + '</div>';
+    if (restPh.length) h += '<div class="cph-row">' + restPh.map(function (u) { return '<img src="' + esc(u) + '" alt="ছবি" data-zoom="1">'; }).join('') + '</div>';
     if (ckOrders.length) {
       h += '<div class="ck-list"><div class="ck-h">🎂 কেক ও ছবি</div>' + ckOrders.map(function (v) {
         var o = v.o;
-        return '<div class="ck-row"><div class="ck-ph">' + o.cph.map(function (u) { return '<img src="' + u + '" alt="কেকের ছবি" data-zoom="1">'; }).join('') + '</div>' +
+        return '<div class="ck-row"><div class="ck-ph">' + o.cph.map(function (u) { return '<img src="' + esc(u) + '" alt="কেকের ছবি" data-zoom="1">'; }).join('') + '</div>' +
           '<div class="ck-nm"><b>' + esc(o.item) + '</b><small>🗓️ ' + esc(o.delivery) + ' (' + WD[dow(o.delivery)] + ')</small></div></div>';
       }).join('') + '</div>';
     }
@@ -3724,7 +3733,7 @@
         var o = v.o;
         var tag = o.status === 'cancelled' ? '🚫 বাতিল' : (o.status === 'delivered' ? '✅ ডেলিভারি হয়েছে' : '🕒 চলমান');
         var pays = entries.filter(function (e) { return e.type === 'income' && e.orderId === o.id; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
-        var thumbs = (o.cph && o.cph.length) ? '<span class="ck-ph" style="display:inline-flex;vertical-align:middle;margin-right:8px;">' + o.cph.map(function (u) { return '<img src="' + u + '" alt="কেকের ছবি" data-zoom="1">'; }).join('') + '</span>' : '';
+        var thumbs = (o.cph && o.cph.length) ? '<span class="ck-ph" style="display:inline-flex;vertical-align:middle;margin-right:8px;">' + o.cph.map(function (u) { return '<img src="' + esc(u) + '" alt="কেকের ছবি" data-zoom="1">'; }).join('') + '</span>' : '';
         var r = '<div class="co-full"><div class="co-row"><div>' + thumbs + ordNoBadge(o) + '<b>' + esc(o.item) + '</b><small>' + tag + (o.cat ? ' · ' + esc(o.cat) : '') + '</small></div>' +
           '<div style="text-align:right;"><b>' + fmt(o.total) + '</b></div></div>';
         r += '<div class="co-line">🗓️ ডেলিভারি: ' + esc(o.delivery) + ' (' + WD[dow(o.delivery)] + ')' + (o.time ? ' · ⏰ ' + fmtTime(o.time) : '') + '</div>';
@@ -4208,13 +4217,30 @@
     if (!isFinite(id) || !id || !isFinite(amt) || !(amt > 0)) return null;
     return { id: id, date: String(x.date == null ? '' : x.date), amount: amt, note: String(x.note == null ? '' : x.note), u: Number(x.u) || 0 };
   }
+  /* স্টোরেজ ভরা থাকলে সঞ্চয় সাময়িকভাবে মেমোরিতে থাকে — যাতে সিঙ্কে ক্লাউডের সঞ্চয় ভুল করে মুছে না যায় */
+  var savMem = null;
   function loadSav() {
+    if (savMem) {
+      try { localStorage.setItem(SAV_KEY, JSON.stringify(savMem)); savMem = null; }
+      catch (e) { return savMem.map(normSav).filter(Boolean); }
+    }
     try { var a = JSON.parse(localStorage.getItem(SAV_KEY) || '[]'); return Array.isArray(a) ? a.map(normSav).filter(Boolean) : []; } catch (e) { return []; }
   }
   function saveSav(list) {
-    try { localStorage.setItem(SAV_KEY, JSON.stringify(list)); } catch (e) {}
+    var ok = true;
+    try { localStorage.setItem(SAV_KEY, JSON.stringify(list)); savMem = null; }
+    catch (e) {
+      ok = false; savMem = list.map(normSav).filter(Boolean);
+      toast('⚠️ সঞ্চয় ডিভাইসে সেভ করা যায়নি — স্টোরেজ ভরা। ব্যাকআপ নিয়ে পুরোনো ছবি মুছুন।');
+    }
     if (window.__savReload) { try { window.__savReload(); } catch (e) {} }
+    return ok;
   }
+  window.__savGet = function () { return savMem ? savMem.slice() : null; };
+  window.__savMem = function (list) {
+    if (list) { savMem = list.map(normSav).filter(Boolean); toast('⚠️ সঞ্চয় ডিভাইসে সেভ করা যায়নি — স্টোরেজ ভরা। ব্যাকআপ নিয়ে পুরোনো ছবি মুছুন।'); }
+    else savMem = null;
+  };
   function normTrash(x) {
     if (!x || typeof x !== 'object') return null;
     var tid = Number(x.tid), at = Number(x.at) || 0, kind = x.kind;
@@ -4427,7 +4453,7 @@
     var s = syncState.status, cls = 'sync-status', txt;
     if (!syncCfg.on) txt = '⚪ ক্লাউড সিঙ্ক বন্ধ আছে।';
     else if (s === 'busy') txt = '🔄 সিঙ্ক হচ্ছে…';
-    else if (s === 'err') { cls += ' err'; txt = '⚠️ ' + syncState.msg + (syncCfg.last ? '<br>' + lastText() : ''); }
+    else if (s === 'err') { cls += ' err'; txt = '⚠️ ' + esc(syncState.msg) + (syncCfg.last ? '<br>' + lastText() : ''); }
     else { cls += ' ok'; txt = '✅ সিঙ্ক চালু আছে — প্রতিটি পরিবর্তন নিজে থেকেই ক্লাউডে যাবে।<br>' + lastText(); }
     el.className = cls;
     el.innerHTML = txt;
@@ -5163,8 +5189,8 @@
   var KEY = 'safwanTreatsSavings_v1', WD = ['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
   var list = [], armed = null;
   function $(i) { return document.getElementById(i); }
-  function load() { try { var a = JSON.parse(localStorage.getItem(KEY) || '[]'); list = Array.isArray(a) ? a : []; } catch (e) { list = []; } }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {} try { if (window.__cloudTouch) window.__cloudTouch(); } catch (e) {} }
+  function load() { var m = null; try { m = window.__savGet && window.__savGet(); } catch (e) {} if (m) { list = m; return; } try { var a = JSON.parse(localStorage.getItem(KEY) || '[]'); list = Array.isArray(a) ? a : []; } catch (e) { list = []; } }
+  function save() { var ok = true; try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) { ok = false; } try { if (window.__savMem) window.__savMem(ok ? null : list); } catch (e) {} try { if (window.__cloudTouch) window.__cloudTouch(); } catch (e) {} }
   function fmt(n) { return '৳ ' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function today() { var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
