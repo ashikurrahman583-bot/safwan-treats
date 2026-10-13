@@ -40,7 +40,7 @@
     try { vw = localStorage.getItem('safwanTreatsView'); } catch (e) {}
     if (vw !== 'mobile' && vw !== 'pc') { vw = (window.innerWidth <= 800) ? 'mobile' : 'pc'; }
     document.documentElement.setAttribute('data-view', vw);
-    document.documentElement.setAttribute('data-tab', 'neworder');
+    document.documentElement.setAttribute('data-tab', 'none');
   })();
 </script>
 <script>try { if (localStorage.getItem('safwanTreatsLock_v1')) document.documentElement.setAttribute('data-locked', '1'); } catch (e) {}</script>
@@ -855,6 +855,21 @@
   .bk-banner{display:none;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--exp-bg);border:1.5px solid var(--red);color:var(--text);border-radius:14px;padding:12px 14px;margin-bottom:16px}
   .bk-banner.show{display:flex}
   .bk-banner .bk-b{display:flex;gap:8px;flex-wrap:wrap}
+  .bk-banner .bk-txt{font-weight:600;line-height:1.4}
+  @keyframes bkGlow {
+    0%, 100% { box-shadow: 0 0 10px 2px rgba(239,68,68,0.45), 0 0 0 0 rgba(239,68,68,0); border-color: rgba(239,68,68,0.85); }
+    50% { box-shadow: 0 0 26px 8px rgba(255,90,90,0.9), 0 0 54px 16px rgba(239,68,68,0.45); border-color: #ff7b7b; }
+  }
+  .bk-banner.show{animation:bkGlow 1.6s ease-in-out infinite}
+  @media (prefers-reduced-motion: reduce){ .bk-banner.show{animation:none;box-shadow:0 0 20px 5px rgba(255,90,90,0.7)} }
+  :root[data-view="pc"] .bk-banner{flex-wrap:nowrap;padding:8px 14px;margin-bottom:12px}
+  :root[data-view="pc"] .bk-banner .bk-txt{flex:1;font-size:.95rem}
+  :root[data-view="pc"] .bk-banner .bk-b{flex-wrap:nowrap}
+  :root[data-view="pc"] .bk-banner .bk-b .btn{width:auto;padding:6px 14px;font-size:.88rem;white-space:nowrap}
+  :root[data-view="mobile"] .bk-banner{flex-direction:row;flex-wrap:nowrap;align-items:center;gap:6px;padding:8px 10px;margin-bottom:12px}
+  :root[data-view="mobile"] .bk-banner .bk-txt{flex:1 1 auto;min-width:0;font-size:.8rem;line-height:1.3}
+  :root[data-view="mobile"] .bk-banner .bk-b{flex:0 0 auto;flex-wrap:nowrap;gap:5px;width:auto}
+  :root[data-view="mobile"] .bk-banner .bk-b .btn{flex:0 0 auto;width:auto;padding:6px 8px;font-size:.76rem;white-space:nowrap;border-radius:9px}
   .bin-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1.5px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px}
   #lockBody input{width:100%;margin-bottom:8px}
   #lockBody .btn{width:100%;margin-bottom:8px}
@@ -916,10 +931,10 @@
   :root[data-view="mobile"] .dashboard .stat.due, :root[data-view="mobile"] .dashboard .stat.sav { grid-column: auto; }
 
   /* ট্যাব বার */
-  :root[data-view="mobile"] .tabs { padding: 3px; gap: 3px; border-radius: 13px; top: 4px; }
-  :root[data-view="mobile"] .tab { min-width: 52px; padding: 5px 7px; font-size: 0.66rem; border-radius: 10px; }
-  :root[data-view="mobile"] .tab .ic { font-size: 1rem; }
-  :root[data-view="mobile"] .tab .cnt { min-width: 15px; padding: 0 4px; font-size: 0.6rem; top: 0; right: 1px; }
+  :root[data-view="mobile"] .tabs { padding: 5px; gap: 5px; border-radius: 16px; top: 4px; }
+  :root[data-view="mobile"] .tab { min-width: 72px; padding: 9px 10px; font-size: 0.82rem; border-radius: 13px; }
+  :root[data-view="mobile"] .tab .ic { font-size: 1.45rem; }
+  :root[data-view="mobile"] .tab .cnt { min-width: 19px; padding: 1px 5px; font-size: 0.72rem; top: 1px; right: 2px; }
 
   /* ফর্ম */
   :root[data-view="mobile"] .form-grid { gap: 7px; }
@@ -1016,8 +1031,8 @@
     100% { background-position: -30% 0; }
   }
   @keyframes expPulse {
-    0%, 100% { box-shadow: 0 6px 16px rgba(185,28,28,0.35), 0 0 0 0 rgba(255,140,140,0.0); }
-    50% { box-shadow: 0 6px 16px rgba(185,28,28,0.35), 0 0 18px 5px rgba(255,120,120,0.75); }
+    0%, 100% { box-shadow: 0 6px 16px rgba(185,28,28,0.45), 0 0 12px 3px rgba(255,90,90,0.55), 0 0 0 0 rgba(255,60,60,0); }
+    50% { box-shadow: 0 6px 20px rgba(185,28,28,0.55), 0 0 30px 10px rgba(255,90,90,0.95), 0 0 64px 20px rgba(255,60,60,0.6); }
   }
   .exp-alert {
     color: #ffffff;
@@ -1030,7 +1045,7 @@
   .exp-alert small { color: #ffffff; font-weight: 700; text-shadow: 0 1px 3px rgba(60, 0, 0, 0.75); }
   :root[data-view="mobile"] .exp-alert { font-size: 0.95rem; padding: 8px 12px; }
   :root[data-view="mobile"] .exp-alert small { font-size: 0.8rem; }
-  @media (prefers-reduced-motion: reduce) { .exp-alert { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .exp-alert { animation: none !important; box-shadow: 0 0 22px 6px rgba(255,90,90,0.7); } }
 
   .ono { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 999px; background: linear-gradient(135deg, #b01e68, #e04890); color: #fff; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.3px; vertical-align: middle; white-space: nowrap; }
   .ono-next { margin-left: 6px; background: rgba(176, 30, 104, 0.1); color: #b01e68; border: 1px dashed #b01e68; }
@@ -1125,6 +1140,152 @@
   #ordDetailModal .oc2-sec:first-of-type { margin-top: 10px; }
   #ordDetailBody { max-height: 68vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .oc2-chev { font-size: 1.2rem; line-height: 1; }
+
+  /* ===== ট্যাব পপ-আপ ===== */
+  :root[data-tab="none"] [data-pg] { display: none !important; }
+  .toast { z-index: 95; }
+  .pop-ov { display: none; position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, 0.55); align-items: flex-end; justify-content: center; padding: 0; }
+  .pop-ov.show { display: flex; }
+  .pop-box { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); width: 100%; max-width: 860px; max-height: 92vh; max-height: 92dvh; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4); animation: popUp 0.22s ease-out; overflow: hidden; }
+  @keyframes popUp { from { transform: translateY(40px) scale(0.98); opacity: 0; } to { transform: none; opacity: 1; } }
+  .pop-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1.5px solid var(--border); background: var(--card-2); flex: 0 0 auto; }
+  .pop-head h2 { font-size: 1.1rem; color: var(--heading); margin: 0; }
+  .pop-x { border: none; background: var(--pink); color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem; line-height: 1; cursor: pointer; font-family: inherit; flex: 0 0 auto; }
+  .pop-x:hover { background: var(--pink-dark); }
+  .pop-body { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 14px; display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; }
+  .pop-body > * { margin: 0 !important; max-width: 100% !important; width: 100%; }
+  .pop-body .forms, .pop-body .order-sec { display: contents; }
+  @media (min-width: 700px) {
+    .pop-ov { align-items: center; padding: 20px; }
+    .pop-box { border-radius: 20px; max-height: 90vh; }
+  }
+  body.pop-lock { overflow: hidden; }
+  @media print {
+    .pop-ov.show { position: static !important; display: block !important; background: none !important; padding: 0 !important; }
+    .pop-box { max-height: none !important; box-shadow: none !important; border: none !important; animation: none; overflow: visible; }
+    .pop-head { display: none !important; }
+    .pop-body { overflow: visible !important; padding: 0 !important; }
+  }
+
+  /* ===== ব্যাকআপ রিমাইন্ডার: সবুজ বার, লাল ও বেগুনি বাটন ===== */
+  .bk-banner { background: linear-gradient(135deg, #15803d, #22c55e); border-color: #86efac; color: #fff; }
+  .bk-banner .bk-txt { color: #fff; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+  .bk-banner #bkNow, .bk-banner #bkLater { border: 1.5px solid rgba(255,255,255,0.7); }
+  /* লেখার ওপর দিয়ে আলোর ঝলক */
+  .bk-banner.show { position: relative; overflow: hidden; }
+  .bk-banner.show::after { content: ''; position: absolute; top: -20%; bottom: -20%; left: 0; width: 38%; pointer-events: none; background: linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.08) 45%, rgba(255,255,230,0.17) 50%, rgba(255,255,255,0.08) 55%, rgba(255,255,255,0) 100%); transform: translateX(-130%) skewX(-18deg); animation: bkShine 2.4s ease-in-out infinite; }
+  @keyframes bkShine { 0% { transform: translateX(-130%) skewX(-18deg); } 70%, 100% { transform: translateX(380%) skewX(-18deg); } }
+  @media (prefers-reduced-motion: reduce) { .bk-banner.show::after { animation: none; display: none; } }
+  @keyframes bkGlow {
+    0%, 100% { box-shadow: 0 0 22px 6px rgba(34,197,94,0.75), 0 0 48px 14px rgba(34,197,94,0.4); border-color: #86efac; }
+    50% { box-shadow: 0 0 40px 14px rgba(74,222,128,1), 0 0 90px 34px rgba(34,197,94,0.75), 0 0 140px 50px rgba(34,197,94,0.35); border-color: #dcfce7; }
+  }
+  @media (prefers-reduced-motion: reduce) { .bk-banner.show { box-shadow: 0 0 40px 14px rgba(74,222,128,0.9), 0 0 90px 30px rgba(34,197,94,0.5); } }
+  .bk-banner #bkNow { background: linear-gradient(135deg, #b91c1c, #ef4444); color: #fff; }
+  .bk-banner #bkLater { background: linear-gradient(135deg, #6d28d9, #8b5cf6); color: #fff; }
+
+  /* ===== বিস্তারিত পপ-আপ: ওপরের অংশ স্থির, নিচের ডেটা স্ক্রল ===== */
+  #statModal .modal-box.stat-box { display: flex; flex-direction: column; overflow: hidden; max-height: 92vh; max-height: 92dvh; }
+  #statModal .stat-fixed { flex: 0 0 auto; padding-bottom: 8px; border-bottom: 1.5px solid var(--border); margin-bottom: 8px; }
+  #statModal .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  #statModal .stat-head h2 { margin: 0; }
+  #statModal .stat-fixed .ochips { margin-bottom: 6px; }
+  #statModal .stat-fixed .sd-stats { margin: 8px 0 0; }
+  #statModal .stat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-right: 2px; }
+  #statModal .stat-scroll > .sd-h:first-child { margin-top: 4px; }
+
+  /* ===== সঞ্চয় ও বকেয়া পপ-আপ: ওপরের অংশ স্থির, নিচের ডেটা স্ক্রল ===== */
+  #savModal .modal-box.stat-box { display: flex; flex-direction: column; overflow: hidden; max-height: 92vh; max-height: 92dvh; }
+  #savModal .stat-fixed { flex: 0 0 auto; padding-bottom: 8px; border-bottom: 1.5px solid var(--border); margin-bottom: 8px; }
+  #savModal .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  #savModal .stat-head h2 { margin: 0; }
+  #savModal .stat-fixed .sd-stats { margin: 0; }
+  #savModal .stat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-right: 2px; }
+  .pop-ov[data-ptab="due"] .pop-body { overflow: hidden; }
+  .pop-ov[data-ptab="due"] .pop-body > .due-panel { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  .pop-ov[data-ptab="due"] .due-panel > * { flex: 0 0 auto; }
+  .pop-ov[data-ptab="due"] #dueList { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+  /* ===== রিসাইকেল বিন: ওপরে ✕, নিচের তালিকা স্ক্রল ===== */
+  #binModal .modal-box.bin-box { display: flex; flex-direction: column; overflow: hidden; max-height: 92vh; max-height: 92dvh; }
+  #binModal .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 1.5px solid var(--border); margin-bottom: 8px; flex: 0 0 auto; }
+  #binModal .stat-head h2 { margin: 0; }
+  #binModal .stat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  #binModal .modal-actions { flex: 0 0 auto; }
+
+  /* ===== বিস্তারিত পপ-আপের সারাংশ বক্স: সব এক লাইনে ===== */
+  #statModal .stat-fixed .sd-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  #statModal .stat-fixed .sd-stats .stat { padding: 7px 8px; border-radius: 12px; min-width: 0; }
+  #statModal .stat-fixed .sd-stats .stat .label { font-size: clamp(0.62rem, 2.6vw, 0.78rem); line-height: 1.25; margin-bottom: 3px; }
+  #statModal .stat-fixed .sd-stats .stat .value { font-size: clamp(0.76rem, 3.4vw, 1.1rem); white-space: nowrap; }
+
+  /* ===== দাগ / ভাগ করা লাইন আরও স্পষ্ট ===== */
+  :root { --line: #e7a8c2; }
+  :root[data-theme="dark"] { --line: #8a67a6; }
+  .stat-fixed, #binModal .stat-head, .pop-head { border-bottom-color: var(--line) !important; }
+
+  /* ===== অর্ডার কার্ড: জরুরি অবস্থা অনুযায়ী রং, পেমেন্ট বার, লেজেন্ড ===== */
+  .oc-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.74rem; color: var(--muted); margin: 0 0 10px; font-weight: 700; }
+  .oc-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .oc-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .oc2-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; box-shadow: 0 0 0 2px rgba(255,255,255,0.55); flex: 0 0 auto; }
+  .oc2-pay { margin-top: 8px; padding: 0 2px; }
+  .oc2:not(.folded) .oc2-pay { display: none; }
+  .oc2-pay-t { display: flex; justify-content: space-between; font-size: 0.76rem; font-weight: 800; margin-bottom: 3px; color: var(--text); }
+  .oc2-pay-bar { height: 7px; border-radius: 99px; background: rgba(148,163,184,0.3); overflow: hidden; }
+  .oc2-pay-bar i { display: block; height: 100%; border-radius: 99px; }
+  .oc2-pay.full .oc2-pay-bar i { background: linear-gradient(90deg, #16a34a, #4ade80); }
+  .oc2-pay.part .oc2-pay-bar i { background: linear-gradient(90deg, #ea580c, #fbbf24); }
+  .oc2-pay.none .oc2-pay-bar i { background: #ef4444; min-width: 4px; }
+  .oc2-pay.full .oc2-pay-t span:last-child { color: #16a34a; }
+  .oc2-pay.part .oc2-pay-t span:last-child { color: #ea580c; }
+  .oc2-pay.none .oc2-pay-t span:last-child { color: #ef4444; }
+  :root[data-theme="dark"] .oc2-pay.full .oc2-pay-t span:last-child { color: #4ade80; }
+  :root[data-theme="dark"] .oc2-pay.part .oc2-pay-t span:last-child { color: #fbbf24; }
+  :root[data-theme="dark"] .oc2-pay.none .oc2-pay-t span:last-child { color: #f87171; }
+  .oc2-cd { animation: ocCd 1.8s ease-in-out infinite; }
+  @keyframes ocCd { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+  @media (prefers-reduced-motion: reduce) { .oc2-cd { animation: none; } }
+
+  /* ===== ব্যাকআপ ও রিস্টোর: ওপরে ✕ ===== */
+  #bkModal .modal-box.bin-box { display: flex; flex-direction: column; overflow: hidden; max-height: 92vh; max-height: 92dvh; }
+  #bkModal .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 1.5px solid var(--line); margin-bottom: 8px; flex: 0 0 auto; }
+  #bkModal .stat-head h2 { margin: 0; }
+  #bkModal .stat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+  /* ===== ট্যাব বাটন: মাউস/আঙুল নিলে রং আসবে ===== */
+  .tab[data-tab="neworder"], .tab[data-tab="orders"] { --tg: linear-gradient(135deg, #b45309, #f59e0b); --ts: 0 6px 14px rgba(245,158,11,0.45); }
+  .tab[data-tab="expense"] { --tg: linear-gradient(135deg, #b91c1c, #ef4444); --ts: 0 6px 14px rgba(239,68,68,0.45); }
+  .tab[data-tab="due"] { --tg: linear-gradient(135deg, #c2410c, #fb923c); --ts: 0 6px 14px rgba(251,146,60,0.5); }
+  .tab[data-tab="list"] { --tg: linear-gradient(135deg, var(--pink-dark), var(--rose)); --ts: 0 6px 14px rgba(214,51,132,0.45); }
+  .tab[data-tab="customers"] { --tg: linear-gradient(135deg, #0f766e, #14b8a6); --ts: 0 6px 14px rgba(20,184,166,0.45); }
+  .tab[data-tab="report"] { --tg: linear-gradient(135deg, #6d28d9, #8b5cf6); --ts: 0 6px 14px rgba(139,92,246,0.45); }
+  .tab#binTab { --tg: linear-gradient(135deg, #475569, #94a3b8); --ts: 0 6px 14px rgba(100,116,139,0.45); }
+  .tab[data-tab]:active, .tab#binTab:active { background: var(--tg); color: #fff; box-shadow: var(--ts); transform: scale(0.95); }
+  .tab[data-tab]:active .cnt, .tab#binTab:active .cnt { background: rgba(255,255,255,0.3); }
+  @media (hover: hover) {
+    .tab[data-tab]:hover, .tab#binTab:hover { background: var(--tg); color: #fff; box-shadow: var(--ts); transform: translateY(-2px); }
+    .tab[data-tab]:hover .cnt, .tab#binTab:hover .cnt { background: rgba(255,255,255,0.3); }
+  }
+  .tab { transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s; }
+
+  /* ===== বকেয়া ও সঞ্চয় কার্ডের ওপরের রঙিন দাগ মুছে ফেলা ===== */
+  .dashboard .stat.due, .dashboard .stat.sav { border-top-width: 1.5px !important; }
+  .dashboard .stat.due:not(:hover), .dashboard .stat.sav:not(:hover) { border-top-color: var(--border); }
+
+  /* ===== বকেয়া ও সঞ্চয় কার্ড: বিক্রি/খরচ/লাভের মতো হোভার অ্যানিমেশন ===== */
+  .dashboard .stat.due, .dashboard .stat.sav { transition: 0.2s; }
+  .dashboard .stat.due:hover, .dashboard .stat.sav:hover { transform: translateY(-2px); border-color: var(--pink); }
+
+  /* ===== পপ-আপে তালিকা/প্যানেল চেপে ছোট না হয়ে পুরো লম্বা হবে, পপ-আপ স্ক্রল করবে ===== */
+  .pop-body > *, .pop-body .lists > *, .pop-body .forms > *, .pop-body .order-sec > * { flex-shrink: 0; }
+  .pop-body .list-box { max-height: none; overflow: visible; }
+
+  /* ===== ক্লাউড সিঙ্ক: ওপরে ✕ ===== */
+  #syncModal .modal-box.sync-box { display: flex; flex-direction: column; overflow: hidden; max-height: 92vh; max-height: 92dvh; }
+  #syncModal .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 1.5px solid var(--line); margin-bottom: 8px; flex: 0 0 auto; }
+  #syncModal .stat-head h2 { margin: 0; }
+  #syncModal .stat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 </style>
 </head>
 <body>
@@ -1306,6 +1467,7 @@
       </div>
       <div class="ochips" id="ordChips"></div>
       <input type="text" id="ordSearch" placeholder="🔎 নাম, ফোন বা অর্ডার খুঁজুন" autocomplete="off" style="margin-bottom:12px;">
+      <div class="oc-legend"><span><i style="background:#ef4444"></i>দেরি</span><span><i style="background:#f97316"></i>আজ</span><span><i style="background:#eab308"></i>আগামীকাল</span><span><i style="background:#22c55e"></i>পরে</span><span><i style="background:#3b82f6"></i>ডেলিভারি হয়েছে</span><span><i style="background:#94a3b8"></i>বাতিল</span></div>
       <div id="ordList"></div>
     </div>
 
@@ -1457,7 +1619,7 @@
       <button type="button" class="btn btn-primary" id="cloudBtn2">☁️ ক্লাউড সিঙ্ক সেটিং</button>
     </div>
     <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" style="display:none;">
-    <p class="hint">ব্যাকআপ ফাইল (CSV বা JSON) বেছে নিলে আগের সব এন্ট্রি ফেরত আনা যাবে। ব্রাউজার ক্লিয়ার করার আগে বা ফোন বদলানোর আগে ব্যাকআপ নামিয়ে রাখুন। JSON ব্যাকআপে অর্ডারও থাকে। অথবা “ক্লাউড সিঙ্ক” চালু করলে ফোন ও কম্পিউটারে একই হিসাব নিজে থেকেই মিলে থাকবে।</p>
+    <p class="hint">ব্যাকআপ ফাইল (CSV বা JSON) বেছে নিলে আগের সব এন্ট্রি ফেরত আনা যাবে। ব্রাউজার ক্লিয়ার করার আগে বা ফোন বদলানোর আগে ব্যাকআপ নামিয়ে রাখুন। JSON ব্যাকআপে অর্ডার, সঞ্চয় ও রিসাইকেল বিনও থাকে। অথবা “ক্লাউড সিঙ্ক” চালু করলে ফোন ও কম্পিউটারে একই হিসাব নিজে থেকেই মিলে থাকবে।</p>
   </section>
 
   <section class="panel data-panel" id="toolsPanel" data-pg="report">
@@ -1499,21 +1661,34 @@
   <div id="lockRec" style="display:none;"><input type="text" id="lockRecIn" placeholder="রিকভারি শব্দ" autocomplete="off"><button type="button" class="btn btn-cancel" id="lockRecGo" style="margin-top:8px;width:100%;">লক বন্ধ করুন</button></div>
 </div></div>
 <div class="undo-bar" id="undoBar"></div>
-<div class="modal" id="bkModal"><div class="modal-box"><h2>💾 ব্যাকআপ ও রিস্টোর</h2>
+<div class="modal" id="bkModal"><div class="modal-box bin-box"><div class="stat-head"><h2>💾 ব্যাকআপ ও রিস্টোর</h2><button type="button" class="pop-x" id="bkX" aria-label="বন্ধ করুন">✕</button></div><div class="stat-scroll">
   <p class="hint" id="bkInfo"></p>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 12px;">
+    <label for="bkDays" class="hint" style="margin:0;">⏰ ব্যাকআপ রিমাইন্ডার:</label>
+    <select id="bkDays" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-family:inherit;font-size:0.95rem;">
+      <option value="0">আজই (টেস্ট)</option>
+      <option value="3">৩ দিন পর পর</option>
+      <option value="7">৭ দিন পর পর</option>
+      <option value="15">১৫ দিন পর পর</option>
+      <option value="30">৩০ দিন পর পর</option>
+    </select>
+  </div>
   <div class="modal-actions">
-    <button type="button" class="btn btn-json" id="bkJson">💾 ব্যাকআপ নিন (ফাইল নামান)</button>
+    <div class="btn-row">
+      <button type="button" class="btn btn-save-inc" id="bkJson">💾 ব্যাকআপ নিন</button>
+      <button type="button" class="btn btn-save-exp" id="bkRestore">📥 ব্যাকআপ ফেরত আনুন</button>
+    </div>
     <button type="button" class="btn btn-save-inc" id="bkShare">📤 ব্যাকআপ শেয়ার করুন (Drive / WhatsApp / ইমেইল)</button>
-    <button type="button" class="btn btn-import" id="bkRestore">📥 ব্যাকআপ ফেরত আনুন (রিস্টোর)</button>
     <button type="button" class="btn btn-export" id="bkCsv">📊 Excel/CSV ডাউনলোড</button>
     <button type="button" class="btn btn-primary" id="bkDemo">🧪 ডেমো ডেটা লোড করুন</button>
     <button type="button" class="btn btn-cancel" id="bkDemoDel">🧹 ডেমো ডেটা মুছুন</button>
     <button type="button" class="btn btn-cancel" id="bkClose">বন্ধ করুন</button>
   </div>
+  <p class="hint" style="margin:10px 0 0;">নোট: Excel/CSV শুধু আয়-খরচের তালিকা, তাই এটা নামালে ব্যাকআপ রিমাইন্ডার রিসেট হয় না। রিমাইন্ডার রিসেট হয় শুধু JSON ব্যাকআপ নিলে।</p>
   <p class="hint" style="margin:10px 0 0;">টিপস: ফাইলটি Google Drive বা নিজের WhatsApp-এ পাঠিয়ে রাখলে ফোন হারালেও হিসাব ফেরত পাবেন।</p>
-</div></div>
+</div></div></div>
 <div class="modal" id="lockModal"><div class="modal-box"><h2>🔒 অ্যাপ লক</h2><div id="lockBody"></div><div class="modal-actions"><button type="button" class="btn btn-cancel" id="lockClose">বন্ধ করুন</button></div></div></div>
-<div class="modal" id="binModal"><div class="modal-box"><h2>🗑 রিসাইকেল বিন</h2><p class="hint">ডিলিট করা জিনিস ৩০ দিন এখানে থাকে, তারপর নিজে থেকে মুছে যায়।</p><div id="binBody"></div><div class="modal-actions" style="margin-top:12px;"><button type="button" class="btn btn-save-exp" id="binEmpty">বিন খালি করুন</button><button type="button" class="btn btn-cancel" id="binClose">বন্ধ করুন</button></div></div></div>
+<div class="modal" id="binModal"><div class="modal-box bin-box"><div class="stat-head"><h2>🗑 রিসাইকেল বিন</h2><button type="button" class="pop-x" id="binX" aria-label="বন্ধ করুন">✕</button></div><div class="stat-scroll"><p class="hint" style="margin-top:0">ডিলিট করা জিনিস ৩০ দিন এখানে থাকে, তারপর নিজে থেকে মুছে যায়।</p><div id="binBody"></div></div><div class="modal-actions" style="margin-top:12px;"><button type="button" class="btn btn-save-exp" id="binEmpty">বিন খালি করুন</button><button type="button" class="btn btn-cancel" id="binClose">বন্ধ করুন</button></div></div></div>
 <div class="modal" id="askModal">
   <div class="modal-box">
     <h2 id="askTitle"></h2>
@@ -1548,7 +1723,8 @@
 </div>
 <div class="modal" id="syncModal">
   <div class="modal-box sync-box">
-    <h2>☁️ ক্লাউড সিঙ্ক</h2>
+    <div class="stat-head"><h2>☁️ ক্লাউড সিঙ্ক</h2><button type="button" class="pop-x" id="syncX" aria-label="বন্ধ করুন">✕</button></div>
+    <div class="stat-scroll">
     <div class="sync-status" id="syncStatus"></div>
     <p style="margin-bottom:6px;">ফোন, কম্পিউটার — সব ডিভাইসে একই হিসাব রাখতে আপনার নিজের (বিনামূল্যের) Firebase ডেটাবেস ব্যবহার করা হয়। ডেটা শুধু আপনার ডেটাবেসেই যায়।</p>
     <details>
@@ -1589,6 +1765,7 @@
       <button type="button" class="btn btn-import" id="syncOff">⏹ সিঙ্ক বন্ধ করুন</button>
       <button type="button" class="btn btn-cancel" id="syncClose">বন্ধ করুন</button>
     </div>
+    </div>
   </div>
 </div>
 <div class="modal" id="choiceModal">
@@ -1605,13 +1782,13 @@
 </div>
 <div class="modal" id="statModal">
   <div class="modal-box stat-box">
-    <h2 id="statTitle"></h2>
-    <div class="ochips" id="statChips"></div>
-    <div class="ochips" id="statViews" style="margin-top:6px;"></div>
-    <div id="statBody"></div>
-    <div class="modal-actions" style="margin-top:14px;">
-      <button type="button" class="btn btn-cancel" id="statClose">বন্ধ করুন</button>
+    <div class="stat-fixed">
+      <div class="stat-head"><h2 id="statTitle"></h2><button type="button" class="pop-x" id="statClose" aria-label="বন্ধ করুন">✕</button></div>
+      <div class="ochips" id="statChips"></div>
+      <div class="ochips" id="statViews" style="margin-top:6px;"></div>
+      <div id="statStats"></div>
     </div>
+    <div id="statBody" class="stat-scroll"></div>
   </div>
 </div>
 <div class="modal" id="memoModal"><div class="modal-box"><h2 id="memoViewTitle">📎 ক্যাশ মেমো</h2><div id="memoViewBody"></div><div class="modal-actions"><button type="button" class="btn btn-cancel" id="memoViewClose">বন্ধ করুন</button></div></div></div>
@@ -1640,6 +1817,92 @@
         return { tid: (now - t.agoDays * 864e5) * 1000 + i, kind: t.kind, data: dt, extra: null, label: t.label, at: now - t.agoDays * 864e5 };
       })
     };
+  };
+  /* ===== বাটন চাপলে প্রচুর অতিরিক্ত নমুনা ডেটা (প্রথমবার নিজে থেকে লোডে এটা যোগ হয় না) ===== */
+  var __baseSeed = window.__demoSeed;
+  window.__demoSeed = function (big) {
+    var S = __baseSeed();
+    if (!big) return S;
+    var rs = 20261013;
+    function rnd() { rs |= 0; rs = (rs + 0x6D2B79F5) | 0; var t = Math.imul(rs ^ (rs >>> 15), 1 | rs); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    function pick(a) { return a[Math.floor(rnd() * a.length)]; }
+    function ri(a, b) { return a + Math.floor(rnd() * (b - a + 1)); }
+    var FN = ['আয়েশা','ফাতেমা','রুবিনা','শাহনাজ','মেহেরুন','নাসরিন','সুরাইয়া','তাহমিনা','রোকসানা','জান্নাতুল','মরিয়ম','হালিমা','শিউলি','পারভীন','নাজিয়া','আফসানা','সাবিনা','রেহানা','তামান্না','ইশরাত','করিম','রহিম','সাইফুল','মিজান','শাহিন','হাবিব','রাকিব','সজীব','নাহিদ','ফয়সাল','সোহেল','মাসুদ','জুবায়ের','তৌহিদ','শামীম','আসিফ','রনি','মেহেদী','আশিক','সাব্বির'];
+    var LN = ['আক্তার','বেগম','খাতুন','চৌধুরী','মিয়া','হোসেন','আহমেদ','সরকার','ভুইয়া','তালুকদার','রহমান','সিদ্দিকী','মণ্ডল','শেখ','দাস','ইসলাম','হক','উদ্দিন','কবির','মল্লিক'];
+    var AR = ['মিরপুর ১','মিরপুর ১২','ধানমন্ডি ১৫','গুলশান ১','বনানী ৮','উত্তরা সেক্টর ৭','উত্তরা সেক্টর ১০','মোহাম্মদপুর','কলাবাগান','রামপুরা','মালিবাগ','বাড্ডা','খিলগাঁও','শান্তিনগর','মগবাজার','পল্টন','সূত্রাপুর','লালবাগ','যাত্রাবাড়ী','আদাবর','শ্যামলী','কল্যাণপুর','বসুন্ধরা','নিকুঞ্জ','তেজগাঁও','ফার্মগেট','মতিঝিল','আজিমপুর','গেন্ডারিয়া','টঙ্গী'];
+    var CN = ['জন্মদিনে নিয়মিত অর্ডার দেন','কম মিষ্টি পছন্দ','বাদামহীন কেক চান','সকালে ডেলিভারি পছন্দ','অফিস পার্টিতে অর্ডার দেন','ফুলের ডিজাইন ভালোবাসেন','চকলেট ফ্লেভারের ভক্ত','মেসেঞ্জারে অর্ডার দেন','ঈদ-পূজায় বড় অর্ডার','বিকেলে ডেলিভারি চান','সবসময় অগ্রিম দেন','বাচ্চাদের থিম কেক নেন','রেড ভেলভেট পছন্দ','',''];
+    var ITEMS = [['চকলেট কেক ১ পাউন্ড','কেক',1000],['চকলেট কেক ২ পাউন্ড (নামসহ)','কেক',2000],['রেড ভেলভেট কেক ২ পাউন্ড','কেক',2400],['ফ্রুট কেক ২ পাউন্ড','কেক',1700],['রসমালাই কেক ২ পাউন্ড','কেক',2100],['চিজকেক ১ পাউন্ড','কেক',1400],['থিম কেক ৩ পাউন্ড','কাস্টম অর্ডার',3400],['ওয়েডিং কেক ৫ পাউন্ড','কাস্টম অর্ডার',7500],['অ্যানিভার্সারি কেক ২ পাউন্ড','কাস্টম অর্ডার',2800],['বার্থডে কাপকেক ১২ পিস','কাপকেক',1200],['কাপকেক ২৪ পিস','কাপকেক',2300],['মিনি কাপকেক ৩০ পিস','কাপকেক',1800],['ব্রাউনি ১২ পিস','ব্রাউনি',1500],['ক্যারামেল কাস্টার্ড ১০ কাপ','ডেজার্ট',1400],['পুডিং ৬ কাপ','ডেজার্ট',800],['ম্যাঙ্গো ট্রাইফেল ৮ কাপ','ডেজার্ট',1600],['ডোনাট ১২ পিস','ডেজার্ট',1100]];
+    var NOTES = ['','','','নামসহ লিখে দেবেন','ক্যান্ডেল সঙ্গে দেবেন','কম মিষ্টি','গিফট র‍্যাপ করে দেবেন','দুপুরের আগে পৌঁছাতে হবে','বাদাম ছাড়া','আজকের জন্য জরুরি'];
+    var TIMES = ['','09:00','10:30','12:00','14:00','16:00','17:30'];
+    var BASE = 1792000000000, cid = 0, oidN = 0, eidN = 0, svN = 0;
+    var DC = '(ডেমো) ';
+    var usedNames = {}, usedPh = {};
+    S.c.forEach(function (c) { usedNames[c.name] = 1; usedPh[c.phone] = 1; });
+    var newC = [], i;
+    while (newC.length < 45) {
+      var nm = DC + pick(FN) + ' ' + pick(LN);
+      if (usedNames[nm]) continue; usedNames[nm] = 1;
+      var ph = '01' + pick(['3','5','6','7','8','9']) + String(ri(10000000, 99999999));
+      if (usedPh[ph]) continue; usedPh[ph] = 1;
+      var addr = pick(AR) + ', ঢাকা', fb = pick(['', '', 'facebook.com/' + ph.slice(-4) + '.demo', 'Messenger: ' + nm.replace(DC, ''), 'WhatsApp: ' + ph]);
+      newC.push({ id: BASE + (cid++), name: nm, phone: ph, addr: addr, fb: fb, note: pick(CN), photos: [], u: 0 });
+    }
+    S.c = S.c.concat(newC);
+    var pool = S.c.map(function (c) { return { name: c.name, phone: c.phone, addr: c.addr, fb: c.fb }; });
+    var newO = [], newE = [];
+    function payE(o, daysAgo, amt) {
+      newE.push({ id: BASE + 100000 + (eidN++), type: 'income', date: d(daysAgo), desc: 'অর্ডার: ' + o.customer + ' — ' + o.item, cat: o.cat, amount: amt, orderId: o.id, u: 0 });
+    }
+    function mkOrder(status, delivery, created) {
+      var c = pick(pool), it = pick(ITEMS), dch = pick([0, 0, 100, 150, 200]);
+      var o = { id: BASE + 200000 + (oidN++), customer: c.name, phone: c.phone, item: it[0], delivery: d(delivery), time: pick(TIMES), addr: c.addr, fb: c.fb, note: pick(NOTES), total: it[2] + ri(0, 4) * 50 + dch, dcharge: dch, cat: it[1], status: status, created: d(created), waived: 0, u: 0 };
+      o._dn = delivery; o._cn = created;
+      return o;
+    }
+    function r50(x) { return Math.max(50, Math.round(x / 50) * 50); }
+    /* চলমান (পেন্ডিং) — দেরি, আজ, আগামীকাল ও আগামী ৩০ দিনের মধ্যে */
+    for (i = 0; i < 28; i++) {
+      var dl = i < 4 ? -ri(1, 5) : i < 8 ? 0 : i < 12 ? 1 : ri(2, 30);
+      var o = mkOrder('pending', dl, dl - ri(2, 10) > 0 ? -ri(1, 10) : dl - ri(2, 10));
+      if (o._cn > 0) o._cn = -ri(1, 8);
+      o.created = d(o._cn);
+      if (rnd() < 0.65) payE(o, o._cn, r50(o.total * (0.25 + rnd() * 0.35)));
+      newO.push(o);
+    }
+    /* ডেলিভারি হয়েছে — গত ৪ মাসে (কেউ পুরো টাকা দিয়েছে, কেউ বাকি) */
+    for (i = 0; i < 120; i++) {
+      var dd = -ri(1, 120), cc = dd - ri(2, 8);
+      var o2 = mkOrder('delivered', dd, cc);
+      var kind = rnd();
+      if (kind < 0.62) { var adv = r50(o2.total * (0.3 + rnd() * 0.3)); payE(o2, cc, adv); payE(o2, dd, o2.total - adv); }
+      else if (kind < 0.8) { var adv2 = r50(o2.total * 0.4); payE(o2, cc, adv2); payE(o2, dd, r50((o2.total - adv2) * (0.3 + rnd() * 0.5))); }
+      else if (kind < 0.92) { payE(o2, cc, r50(o2.total * (0.2 + rnd() * 0.3))); }
+      else if (kind < 0.96) { var adv3 = r50(o2.total * 0.5); payE(o2, cc, adv3); o2.waived = o2.total - adv3; }
+      newO.push(o2);
+    }
+    /* বাতিল */
+    for (i = 0; i < 10; i++) { var cd = -ri(1, 60); var o3 = mkOrder('cancelled', cd + 2, cd - 3); newO.push(o3); }
+    newO.forEach(function (o) { delete o._dn; delete o._cn; });
+    S.o = S.o.concat(newO);
+    /* সরাসরি বিক্রি */
+    var DI = [['ফেসবুক পেজ থেকে বিক্রি', 'কেক'], ['ওয়াক-ইন কাপকেক বিক্রি', 'কাপকেক'], ['মার্কেট স্টলে বিক্রি', 'কেক'], ['ছোট অর্ডার (নগদ)', 'কাস্টম অর্ডার'], ['ডেজার্ট বক্স বিক্রি', 'ডেজার্ট'], ['কেক স্লাইস বিক্রি', 'কেক'], ['কুকিজ ও অন্যান্য', 'অন্যান্য']];
+    for (i = 0; i < 180; i++) { var di = pick(DI); newE.push({ id: BASE + 100000 + (eidN++), type: 'income', date: d(-ri(0, 360)), desc: '[ডেমো] ' + di[0], cat: di[1], amount: ri(3, 40) * 50, u: 0 }); }
+    /* খরচ */
+    var DX = [['ময়দা, চিনি ও ডিম', 'কাঁচামাল', 600, 3200], ['চকোলেট ও কোকো', 'কাঁচামাল', 800, 2600], ['ফ্রেশ ক্রিম ও বাটার', 'কাঁচামাল', 700, 2400], ['ফল ও ড্রাই ফ্রুটস', 'কাঁচামাল', 400, 1800], ['কেক বক্স ও বোর্ড', 'প্যাকেজিং', 300, 1400], ['রিবন ও কার্ড', 'প্যাকেজিং', 200, 700], ['ডেলিভারি চার্জ (পাঠাও)', 'ডেলিভারি', 100, 300], ['ডেলিভারি চার্জ (রাইডার)', 'ডেলিভারি', 100, 250], ['গ্যাস সিলিন্ডার', 'গ্যাস/বিদ্যুৎ', 1300, 1500], ['বিদ্যুৎ বিল', 'গ্যাস/বিদ্যুৎ', 700, 1200], ['ফেসবুক বুস্ট', 'বিজ্ঞাপন', 300, 1500], ['সহকারীর মজুরি', 'মজুরি', 1000, 3000], ['বেকিং ট্রে ও টুলস', 'যন্ত্রপাতি', 500, 3500], ['ডেকোরেশন টপার ও ফুল', 'ডেকোরেশন সামগ্রী', 300, 1600]];
+    for (i = 0; i < 240; i++) { var dx = pick(DX); newE.push({ id: BASE + 100000 + (eidN++), type: 'expense', date: d(-ri(0, 360)), desc: '[ডেমো] ' + dx[0], cat: dx[1], amount: r50(ri(dx[2], dx[3])), u: 0 }); }
+    S.e = S.e.concat(newE);
+    /* সঞ্চয় */
+    var SN = ['(ডেমো) অর্ডারের লাভ', '(ডেমো) মাসের প্রথম জমা', '(ডেমো) ঈদের বোনাস থেকে', '(ডেমো) বাড়তি আয় থেকে', '(ডেমো) নতুন ওভেনের জন্য', '(ডেমো) জরুরি তহবিল'];
+    for (i = 0; i < 70; i++) S.sv.push({ id: BASE + 300000 + (svN++), date: d(-ri(0, 330)), amount: ri(2, 40) * 50, note: pick(SN) });
+    /* বিন */
+    var nowT = Date.now();
+    for (i = 0; i < 8; i++) {
+      var ago = ri(1, 25), isE = i % 2 === 0;
+      var dat = isE ? { id: BASE + 400000 + i, type: i % 4 === 0 ? 'expense' : 'income', date: d(-ago - 1), desc: '[ডেমো] ভুল এন্ট্রি ' + (i + 1), cat: i % 4 === 0 ? 'কাঁচামাল' : 'কেক', amount: ri(2, 20) * 50, u: 0 }
+        : { id: BASE + 400000 + i, name: '(ডেমো) পুরনো ক্রেতা ' + (i + 1), phone: '0170000000' + i, addr: '', fb: '', note: 'ভুল করে যোগ হয়েছিল', photos: [], u: 0 };
+      S.tr.push({ tid: (nowT - ago * 864e5) * 1000 + 500 + i, kind: isE ? 'entry' : 'customer', data: dat, extra: null, label: isE ? '🧾 ' + dat.desc + ' — ৳ ' + dat.amount : '👤 ' + dat.name, at: nowT - ago * 864e5 });
+    }
+    return S;
   };
   try {
     function has(k) { try { var v = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(v) && v.length > 0; } catch (e) { return false; } }
@@ -1686,6 +1949,7 @@
   var orders = [];
   var customers = [];
   var importCust = [];
+  var importSav = [], importTrash = [];
   var tomb = { e: {}, o: {}, c: {}, s: {}, t: {} };
   var editingOrder = null;
 
@@ -2587,7 +2851,7 @@
       } catch (e) {}
       toast('এই ব্রাউজারে সরাসরি শেয়ার চলে না — ফাইল নামানো হচ্ছে');
     }
-    if (/^Safwan-Treats-Backup/.test(name) && window.markBackup) window.markBackup();
+    if (/^Safwan-Treats-Backup.*\.json$/.test(name) && window.markBackup) window.markBackup();
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
@@ -2613,7 +2877,7 @@
     download(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' }), 'Safwan-Treats-Backup-' + today() + '.csv');
   });
   $('jsonBtn').addEventListener('click', function () {
-    if (!entries.length && !orders.length) { alert('ব্যাকআপ করার মতো কোনো ডেটা নেই।'); return; }
+    if (!entries.length && !orders.length && !loadSav().length && !trash.length) { alert('ব্যাকআপ করার মতো কোনো ডেটা নেই।'); return; }
     var out = entries.map(function (e) { return Object.assign({}, e); });
     var outO = orders.map(function (o) { return Object.assign({}, o); });
     var chain = Promise.resolve();
@@ -2629,8 +2893,15 @@
         if (x && l.length) x.memos = l.map(function (m) { return m.data; });
       });
     });
+    var outT = trash.map(function (t) { return Object.assign({}, t); });
+    outT.forEach(function (t) {
+      if (t.kind === 'customer' || !t.data) return;
+      chain = chain.then(function () { return memoGetEid(t.data.id); }).then(function (l) {
+        if (l.length) t.memos = l.map(function (m) { return m.data; });
+      }).catch(function () {});
+    });
     chain.catch(function () { toast('⚠️ কিছু মেমোর ছবি ব্যাকআপে যায়নি'); }).then(function () {
-      var payload = { app: 'Safwan Treats', version: 4, exportedAt: new Date().toISOString(), categories: customCats, entries: out, orders: outO, customers: customers };
+      var payload = { app: 'Safwan Treats', version: 5, exportedAt: new Date().toISOString(), categories: customCats, entries: out, orders: outO, customers: customers, savings: loadSav(), trash: outT };
       download(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'Safwan-Treats-Backup-' + today() + '.json');
     });
   });
@@ -2705,6 +2976,8 @@
     }).filter(Boolean);
     var ords = (p && Array.isArray(p.orders) ? p.orders : []).map(function (x) { var n = normalizeOrder(x); if (n && x && Array.isArray(x.memos)) n._memos = x.memos; return n; }).filter(Boolean);
     importCust = (p && Array.isArray(p.customers) ? p.customers : []).map(normalizeCustomer).filter(Boolean);
+    importSav = (p && Array.isArray(p.savings) ? p.savings : []).map(normSav).filter(Boolean);
+    importTrash = (p && Array.isArray(p.trash) ? p.trash : []).map(function (x) { var n = normTrash(x); if (n && x && Array.isArray(x.memos)) n._memos = x.memos; return n; }).filter(Boolean);
     return { list: list, cats: cats, orders: ords };
   }
   function key(e) { return [e.type, e.date, e.desc, e.cat, e.amount].join('|'); }
@@ -2714,7 +2987,7 @@
     var ni = 0, ne = 0;
     list.forEach(function (e) { if (e.type === 'income') ni++; else ne++; });
     $('impInfo').innerHTML = '<b>' + escapeHtml(fileName) + '</b> ফাইলে <b>' + list.length + '</b> টি এন্ট্রি পাওয়া গেছে (আয় ' + ni +
-      ', খরচ ' + ne + ')' + (pending.orders.length ? ' এবং <b>' + pending.orders.length + '</b> টি অর্ডার' : '') + '।<br>বর্তমানে ব্রাউজারে আছে <b>' + entries.length + '</b> টি এন্ট্রি।';
+      ', খরচ ' + ne + ')' + (pending.orders.length ? ' এবং <b>' + pending.orders.length + '</b> টি অর্ডার' : '') + (importSav.length ? ' এবং <b>' + importSav.length + '</b> টি সঞ্চয়' : '') + (importTrash.length ? ' এবং রিসাইকেল বিনে <b>' + importTrash.length + '</b> টি আইটেম' : '') + '।<br>বর্তমানে ব্রাউজারে আছে <b>' + entries.length + '</b> টি এন্ট্রি।';
     $('importModal').className = 'modal show';
   }
   function closeModal() { $('importModal').className = 'modal'; pending = null; }
@@ -2729,7 +3002,42 @@
     });
     saveCats();
   }
-  function finishImport(msg) {
+  function applyImportExtras(replace) {
+    var now = Date.now(), sv = loadSav(), addS = 0, addT = 0, seen = {}, haveT = {}, impT = {}, keepM = {};
+    tomb.s = tomb.s || {}; tomb.t = tomb.t || {};
+    importTrash.forEach(function (x) { impT[x.tid] = 1; });
+    if (replace) {
+      sv.forEach(function (x) { tomb.s[x.id] = now; });
+      trash.forEach(function (x) {
+        tomb.t[x.tid] = now;
+        if (impT[x.tid]) keepM[x.tid] = 1;
+        else if (x.kind !== 'customer') { try { memoDelEid(x.data.id); } catch (e) {} }
+      });
+      sv = []; trash = [];
+    }
+    sv.forEach(function (x) { seen[x.id] = 1; });
+    importSav.forEach(function (x) {
+      if (seen[x.id]) return;
+      seen[x.id] = 1; delete tomb.s[x.id]; x.u = now + 1;
+      sv.push(x); addS++;
+    });
+    trash.forEach(function (x) { haveT[x.tid] = 1; });
+    importTrash.forEach(function (x) {
+      if (haveT[x.tid] || (!replace && tomb.t[x.tid])) return;
+      haveT[x.tid] = 1; delete tomb.t[x.tid];
+      var mm = x._memos; delete x._memos;
+      if (mm && !keepM[x.tid] && x.kind !== 'customer') memoImport(x.data.id, mm);
+      trash.push(x); addT++;
+    });
+    trash.sort(function (a, b) { return b.at - a.at; });
+    trash = trash.slice(0, 100);
+    if (replace || addS) saveSav(sv);
+    if (replace || addT) { saveTrash(); updBinCnt(); }
+    importSav = []; importTrash = [];
+    return (addS ? ', সঞ্চয় ' + addS + 'টি' : '') + (addT ? ', রিসাইকেল বিন ' + addT + 'টি' : '');
+  }
+  function finishImport(msg, replace) {
+    msg += applyImportExtras(!!replace);
     importCust.forEach(function (c) { if (!findCust(c.name, c.phone)) { c.id = newId(); c.u = Date.now(); customers.push(c); } });
     importCust = [];
     buildCatSelect('income', lastCat.income);
@@ -2748,6 +3056,7 @@
     reader.onload = function () {
       var text = String(reader.result || '');
       var list = [], cats = null, ords = [];
+      importCust = []; importSav = []; importTrash = [];
       try {
         var s = text.replace(/^\uFEFF/, '').trim();
         if (/\.json$/i.test(f.name) || s.charAt(0) === '{' || s.charAt(0) === '[') {
@@ -2758,7 +3067,7 @@
         }
       } catch (e) { list = []; }
       input.value = '';
-      if (!list.length && !ords.length) { alert('ফাইলে কোনো সঠিক এন্ট্রি পাওয়া যায়নি। ব্যাকআপ হিসেবে নামানো CSV বা JSON ফাইল বেছে নিন।'); return; }
+      if (!list.length && !ords.length && !importSav.length && !importTrash.length) { alert('ফাইলে কোনো সঠিক এন্ট্রি পাওয়া যায়নি। ব্যাকআপ হিসেবে নামানো CSV বা JSON ফাইল বেছে নিন।'); return; }
       openImportModal(list, cats, f.name, ords);
     };
     reader.onerror = function () { input.value = ''; alert('ফাইলটি পড়া যায়নি।'); };
@@ -2784,7 +3093,7 @@
       if (!orders.some(function (x) { return x.id === o.id; })) { var om = o._memos; delete o._memos; o.u = Date.now(); orders.push(o); added++; memoImport(o.id, om); }
     });
     mergeCats(pending.cats);
-    finishImport('✅ ' + added + 'টি এন্ট্রি যোগ হয়েছে' + (skipped ? ', ' + skipped + 'টি আগে থেকেই ছিল (বাদ)' : ''));
+    finishImport('✅ ' + added + 'টি এন্ট্রি যোগ হয়েছে' + (skipped ? ', ' + skipped + 'টি আগে থেকেই ছিল (বাদ)' : ''), false);
   });
   $('impReplace').addEventListener('click', function () {
     if (!pending) return;
@@ -2801,7 +3110,7 @@
     orders = (pending.orders || []).map(function (o) { var om = o._memos; delete o._memos; o.u = tnow + 1; memoImport(o.id, om); return o; });
     orders.forEach(function (o) { delete tomb.o[o.id]; });
     mergeCats(pending.cats);
-    finishImport('✅ ব্যাকআপ থেকে ' + entries.length + 'টি এন্ট্রি ফেরত এসেছে');
+    finishImport('✅ ব্যাকআপ থেকে ' + entries.length + 'টি এন্ট্রি ফেরত এসেছে', true);
   });
 
   /* ---------- প্রিন্ট ---------- */
@@ -2854,14 +3163,91 @@
   applyView(document.documentElement.getAttribute('data-view') || 'pc');
 
   /* ---------- মোবাইল ট্যাব ---------- */
-  function applyTab(tab) {
-    document.documentElement.setAttribute('data-tab', tab);
+  var popTab = null, popHolders = [], popPushed = false, popEl = null;
+  function popBuild() {
+    if (popEl) return;
+    popEl = document.createElement('div');
+    popEl.className = 'pop-ov';
+    popEl.id = 'popOv';
+    popEl.innerHTML = '<div class="pop-box" role="dialog" aria-modal="true"><div class="pop-head"><h2 id="popTitle"></h2><button type="button" class="pop-x" id="popX" aria-label="বন্ধ করুন">✕</button></div><div class="pop-body" id="popBody"></div></div>';
+    (document.querySelector('.container') || document.body).appendChild(popEl);
+    popEl.addEventListener('click', function (ev) { if (ev.target === popEl) popClose(); });
+    document.getElementById('popX').addEventListener('click', function () { popClose(); });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape' || !popTab) return;
+      if (document.querySelector('.modal.show')) return;
+      popClose();
+    });
+    window.addEventListener('popstate', function () {
+      if (popTab) { popPushed = false; popClose(true); }
+    });
+  }
+  function popRestore() {
+    for (var i = 0; i < popHolders.length; i++) {
+      var h = popHolders[i];
+      if (h.ph.parentNode) { h.ph.parentNode.insertBefore(h.el, h.ph); h.ph.parentNode.removeChild(h.ph); }
+    }
+    popHolders = [];
+  }
+  function popMarkTab(tab) {
     var btns = document.querySelectorAll('#tabs .tab');
     for (var i = 0; i < btns.length; i++) {
-      var on = btns[i].getAttribute('data-tab') === tab;
+      var on = !!tab && btns[i].getAttribute('data-tab') === tab;
       btns[i].className = 'tab' + (on ? ' active' : '');
-      if (on && btns[i].scrollIntoView) { try { btns[i].scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} }
     }
+  }
+  function popTitleOf(tab) {
+    var b = document.querySelector('#tabs .tab[data-tab="' + tab + '"]');
+    if (!b) return tab === 'income' ? '💰 আয় যোগ / এডিট' : '';
+    var t = '';
+    for (var i = 0; i < b.childNodes.length; i++) {
+      var n = b.childNodes[i];
+      if (n.nodeType === 3) t += n.textContent;
+      else if (n.className === 'ic') t = n.textContent + ' ' + t;
+    }
+    return t.replace(/\s+/g, ' ').trim();
+  }
+  function popOpen(tab) {
+    popBuild();
+    popRestore();
+    var root = document.documentElement;
+    root.setAttribute('data-tab', tab);
+    var body = document.getElementById('popBody');
+    var all = document.querySelectorAll('[data-pg]');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (popEl.contains(el)) continue;
+      if ((' ' + el.getAttribute('data-pg') + ' ').indexOf(' ' + tab + ' ') < 0) continue;
+      var ph = document.createComment('pop');
+      el.parentNode.insertBefore(ph, el);
+      body.appendChild(el);
+      popHolders.push({ el: el, ph: ph });
+    }
+    document.getElementById('popTitle').textContent = popTitleOf(tab);
+    body.scrollTop = 0;
+    popEl.setAttribute('data-ptab', tab);
+    popEl.className = 'pop-ov show';
+    document.body.classList.add('pop-lock');
+    popMarkTab(tab);
+    if (!popTab) {
+      try { history.pushState({ pop: 1 }, ''); popPushed = true; } catch (e) { popPushed = false; }
+    }
+    popTab = tab;
+  }
+  function popClose(fromPop) {
+    popRestore();
+    if (popEl) popEl.className = 'pop-ov';
+    document.body.classList.remove('pop-lock');
+    document.documentElement.setAttribute('data-tab', 'none');
+    popMarkTab(null);
+    var had = popTab;
+    popTab = null;
+    if (had && popPushed && !fromPop) { popPushed = false; try { history.back(); } catch (e) {} }
+    popPushed = false;
+  }
+  function applyTab(tab) {
+    if (!tab || tab === 'none') { popClose(); return; }
+    popOpen(tab);
   }
   $('tabs').addEventListener('click', function (ev) {
     var b = ev.target.closest('.tab');
@@ -2892,13 +3278,8 @@
     t.addEventListener('dragstart', function (e) { e.preventDefault(); });
   })();
   /* ট্যাব বদলালে পেজ একদম ওপরে (ব্যানারে) না গিয়ে ট্যাব বারের জায়গাতেই থাকবে */
-  function keepTabsView() {
-    var a = $('tabsAnchor'); if (!a) return;
-    var y = a.getBoundingClientRect().top + (window.pageYOffset || 0) - 6;
-    if ((window.pageYOffset || 0) > y) window.scrollTo(0, Math.max(0, y));
-  }
+  function keepTabsView() {}
   function setCnt(id, n) { var el = $(id); if (!el) return; el.textContent = n; el.style.display = n ? '' : 'none'; }
-  applyTab('neworder');
 
   /* =====================================================
      অর্ডার ম্যানেজমেন্ট ও বকেয়া ট্র্যাকিং
@@ -3104,17 +3485,37 @@
     if (o.status === 'cancelled') return 'বাতিল';
     return d < 0 ? bnN(-d) + ' দিন দেরি' : d === 0 ? 'আজ' : d === 1 ? 'আগামীকাল' : bnN(d) + ' দিন পরে';
   }
+  var OC_URG = { late: ['239,68,68', '#b91c1c', '#fca5a5'], today: ['249,115,22', '#c2410c', '#fdba74'], tomorrow: ['234,179,8', '#854d0e', '#fde047'], later: ['34,197,94', '#15803d', '#86efac'], done: ['59,130,246', '#1d4ed8', '#93c5fd'], cancel: ['148,163,184', '#475569', '#cbd5e1'] };
+  function ocUrgPal(o, bal) { /* জরুরি অবস্থা অনুযায়ী কার্ডের রং */
+    if (o.status === 'cancelled') return OC_URG.cancel;
+    if (o.status === 'delivered') return bal > 0 ? OC_URG.late : OC_URG.done;
+    var d = dayDiff(o.delivery);
+    return d < 0 ? OC_URG.late : d === 0 ? OC_URG.today : d === 1 ? OC_URG.tomorrow : OC_URG.later;
+  }
+  function ocCountdown(o) { /* আজকের ডেলিভারিতে সময় দেওয়া থাকলে কত সময় বাকি */
+    if (o.status !== 'pending' || !o.time || dayDiff(o.delivery) !== 0) return '';
+    var p = String(o.delivery).split('-'), t = String(o.time).split(':');
+    var mins = Math.round((new Date(+p[0], +p[1] - 1, +p[2], +t[0], +t[1]) - new Date()) / 60000);
+    if (mins < 0) return ' <span class="badge b-late">⌛ সময় পার হয়েছে</span>';
+    var h = Math.floor(mins / 60), m = mins % 60;
+    return ' <span class="badge b-warn oc2-cd">⏳ আর ' + (h ? bnN(h) + ' ঘণ্টা ' : '') + (m || !h ? bnN(m) + ' মিনিট' : '') + '</span>';
+  }
+  function ocPayBlock(o, v, bal, pct) { /* পেমেন্টের অবস্থা: সবুজ = পুরো, কমলা = কিছু, লাল = কিছুই না */
+    if (o.status === 'cancelled') return '';
+    var cls = (bal <= 0 || pct >= 100) ? 'full' : pct > 0 ? 'part' : 'none';
+    return '<div class="oc2-pay ' + cls + '"><div class="oc2-pay-t"><span>💰 ' + fmt(v.paid) + ' / ' + fmt(o.total) + '</span><span>' + bnN(pct) + '%</span></div><div class="oc2-pay-bar"><i style="width:' + pct + '%"></i></div></div>';
+  }
   function orderCard(v, modal) {
     var o = v.o, bal = v.bal, st = statusInfo(o, bal), wa = waLink(v);
     var c = findCust(o.customer, o.phone), cs = c && ocStats[c.id], folded = !modal, more = !!ocMore[o.id];
     var pct = o.total > 0 ? Math.max(0, Math.min(100, Math.round(v.paid / o.total * 100))) : 0;
-    var pal = ocPal(o);
+    var cpal = ocPal(o), pal = ocUrgPal(o, bal);
     var h = '<div class="ocard oc2 ' + st.cls + (folded ? ' folded' : '') + '" style="--pc:' + pal[0] + ';--pk-d:' + pal[1] + ';--pk-l:' + pal[2] + '">';
     /* হেডার: নাম + অবস্থা (চাপলে ভাঁজ/খোলা) */
-    h += '<div class="oc2-head' + (modal ? ' static' : '') + '"' + (modal ? '' : ' role="button" tabindex="0" data-fold="' + o.id + '" title="চাপলে পুরো বিবরণ খুলবে"') + '><div class="oc2-name">' + ordNoBadge(o) + esc(o.customer) +
+    h += '<div class="oc2-head' + (modal ? ' static' : '') + '"' + (modal ? '' : ' role="button" tabindex="0" data-fold="' + o.id + '" title="চাপলে পুরো বিবরণ খুলবে"') + '><div class="oc2-name"><i class="oc2-dot" style="background:rgb(' + cpal[0] + ')" title="ক্রেতার নিজস্ব রং"></i>' + ordNoBadge(o) + esc(o.customer) +
       (o.phone ? ' <span class="oc2-ph">📞 ' + esc(o.phone) + '</span>' : '') +
       (cs && cs.n >= 3 ? ' <span class="oc2-tag">⭐</span>' : '') + '</div>' + (modal ? '' : '<span class="oc2-chev">›</span>') + '</div>' +
-      '<div class="oc2-badges">' + st.badge + '</div>';
+      '<div class="oc2-badges">' + st.badge + ocCountdown(o) + '</div>' + ocPayBlock(o, v, bal, pct);
     h += '<div class="oc2-body">';
     /* ১. ক্রেতার তথ্য */
     h += '<div class="oc2-sec sec-cust"><div class="oc2-lbl">👤 ক্রেতা</div>';
@@ -3162,10 +3563,10 @@
     h += '<button type="button" class="row-btn del" data-oact="del" data-id="' + o.id + '">🗑 Delete</button></div>';
     return h + '</div></div>';
   }
-  $('orderSec').addEventListener('keydown', function (ev) {
+  document.addEventListener('keydown', function (ev) {
     if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.classList && ev.target.classList.contains('oc2-head')) { ev.preventDefault(); ev.target.click(); }
   });
-  $('orderSec').addEventListener('click', function (ev) {
+  document.addEventListener('click', function (ev) {
     var f = ev.target.closest('[data-fold]'), m = ev.target.closest('[data-more]');
     if (f && !ev.target.closest('a,button:not([data-fold])')) { openOrdDetail(Number(f.getAttribute('data-fold'))); return; }
     if (m) {
@@ -3867,7 +4268,7 @@
   $('custStats').addEventListener('click', function (e) { setCustFilter(e.target); });
   $('custStats').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCustFilter(e.target); } });
   $('custSort').addEventListener('change', function () { custSort = this.value; renderCustomers(); });
-  $('custSec').addEventListener('click', function (ev) {
+  document.addEventListener('click', function (ev) {
     var z = ev.target.closest('img[data-zoom]');
     if (z) { $('photoBig').src = z.getAttribute('src'); $('photoModal').className = 'modal show'; return; }
     var rm = ev.target.closest('button[data-rmph]');
@@ -4001,7 +4402,7 @@
       toast('🎂 কেকের ছবি যুক্ত হয়েছে' + (sent ? ' — পুরাতন ক্রেতায়ও যোগ হয়েছে' : ' — পেমেন্ট নিলে পুরাতন ক্রেতায় যোগ হবে'));
     });
   });
-  $('orderSec').addEventListener('click', function (ev) {
+  document.addEventListener('click', function (ev) {
     var z = ev.target.closest('#ordList img[data-zoom], #ordDetailModal img[data-zoom]');
     if (z) { $('photoBig').src = z.getAttribute('src'); $('photoModal').className = 'modal show'; return; }
     var b = ev.target.closest('button[data-cact]');
@@ -4018,7 +4419,7 @@
       afterDataChange();
     }
   });
-  $('orderSec').addEventListener('click', function (ev) {
+  document.addEventListener('click', function (ev) {
     var btn = ev.target.closest('button[data-oact]');
     if (!btn) return;
     var id = Number(btn.getAttribute('data-id'));
@@ -4263,7 +4664,23 @@
   function savTrashSig() { return sigList(loadSav()) + '|' + sigTomb(tomb.s) + '|' + sigList(trash.map(trashWrap)) + '|' + sigTomb(tomb.t); }
   window.__cloudTouch = function () { scheduleSync(); };
   window.__cloudSavDel = function (id) { tomb.s = tomb.s || {}; tomb.s[id] = Date.now(); persistLocal(); };
-  function buildPayload() { return { v: 4, t: Date.now(), entries: entries, orders: orders, customers: customers, cats: customCats, savings: loadSav(), trash: trash, del: tomb }; }
+  /* ডেমো ডেটা শুধু এই ডিভাইসে থাকে — ক্লাউডে পাঠানো হয় না */
+  function nonDemo() {
+    var oid = {};
+    orders.forEach(function (o) { if (String(o.customer).indexOf('(ডেমো) ') === 0) oid[o.id] = 1; });
+    return {
+      entries: entries.filter(function (e) { return !(String(e.desc).indexOf('[ডেমো] ') === 0 || (e.orderId && oid[e.orderId])); }),
+      orders: orders.filter(function (o) { return !oid[o.id]; }),
+      customers: customers.filter(function (c) { return String(c.name).indexOf('(ডেমো) ') !== 0; }),
+      savings: loadSav().filter(function (x) { return String(x.note || '').indexOf('(ডেমো)') !== 0; }),
+      trash: trash.filter(function (t) { return String(t.label || '').indexOf('ডেমো') < 0; })
+    };
+  }
+  function sigNoDemo() {
+    var nd = nonDemo();
+    return sigList(nd.entries) + '|' + sigList(nd.orders) + '|' + sigList(nd.customers) + '|' + sigTomb(tomb.e) + '|' + sigTomb(tomb.o) + '|' + sigTomb(tomb.c) + '|' + sigCats(customCats) + '|' + sigList(nd.savings) + '|' + sigTomb(tomb.s) + '|' + sigList(nd.trash.map(trashWrap)) + '|' + sigTomb(tomb.t);
+  }
+  function buildPayload() { var nd = nonDemo(); return { v: 4, t: Date.now(), entries: nd.entries, orders: nd.orders, customers: nd.customers, cats: customCats, savings: nd.savings, trash: nd.trash, del: tomb }; }
 
   /* ---------- ক্যাশ মেমোর ছবি সিঙ্ক (Firebase: memos / memosDel) ---------- */
   function memoSync() {
@@ -4374,7 +4791,7 @@
     orders.forEach(function (o) { if (o.id > uid) uid = o.id; });
     var after = sigOf();
     var remoteSig = sigList(r.entries) + '|' + sigList(r.orders) + '|' + sigList(r.customers || []) + '|' + sigTomb(r.tE) + '|' + sigTomb(r.tO) + '|' + sigTomb(r.tC || {}) + '|' + sigCats(r.cats) + '|' + sigList(r.savings || []) + '|' + sigTomb(r.tS || {}) + '|' + sigList((r.trash || []).map(trashWrap)) + '|' + sigTomb(r.tT || {});
-    return { localChanged: before !== after, pushNeeded: after !== remoteSig };
+    return { localChanged: before !== after, pushNeeded: sigNoDemo() !== remoteSig };
   }
   function refreshAfterMerge() {
     persistLocal();
@@ -4554,6 +4971,7 @@
   $('cloudBtn').addEventListener('click', openSync);
   $('cloudBtn2').addEventListener('click', openSync);
   $('syncClose').addEventListener('click', function () { closeM('syncModal'); });
+  $('syncX').addEventListener('click', function () { closeM('syncModal'); });
   $('syncModal').addEventListener('click', function (e) { if (e.target === this) closeM('syncModal'); });
   $('syncConnect').addEventListener('click', connectCloud);
   $('syncNow').addEventListener('click', function () { runSync(true); });
@@ -4724,8 +5142,19 @@
       }
     }
     $('statBody').innerHTML = h;
+    var stBox = $('statStats'), stEl = $('statBody').querySelector('.sd-stats');
+    stBox.innerHTML = '';
+    if (stEl) stBox.appendChild(stEl);
+    fitStat();
   }
-  function openStat(kind) { statKind = kind; statPer = 'all'; statView = (kind === 'net' ? 'all' : 'date'); renderStat(); $('statModal').className = 'modal show'; $('statBody').scrollTop = 0; }
+  function fitStat() {
+    Array.prototype.forEach.call($('statStats').querySelectorAll('.value'), function (v) {
+      v.style.fontSize = '';
+      var fs = parseFloat(window.getComputedStyle(v).fontSize) || 14;
+      while (v.scrollWidth > v.clientWidth && fs > 9) { fs -= 0.5; v.style.fontSize = fs + 'px'; }
+    });
+  }
+  function openStat(kind) { statKind = kind; statPer = 'all'; statView = (kind === 'net' ? 'all' : 'date'); renderStat(); $('statModal').className = 'modal show'; fitStat(); $('statBody').scrollTop = 0; }
   function closeStat() { $('statModal').className = 'modal'; }
   Array.prototype.forEach.call(document.querySelectorAll('.stat.click'), function (el) {
     el.addEventListener('click', function () { openStat(el.getAttribute('data-stat')); });
@@ -4747,7 +5176,7 @@
   });
   /* ডিলিটের পর পপআপের তালিকা নতুন করে দেখানো (খোলা তারিখ/বার ও স্ক্রল ঠিক রেখে) */
   function refreshStatKeep() {
-    var box = $('statModal').querySelector('.modal-box'), top = box ? box.scrollTop : 0, open = [];
+    var box = $('statBody'), top = box ? box.scrollTop : 0, open = [];
     Array.prototype.forEach.call($('statBody').querySelectorAll('tr.sd-day'), function (tr, i) { if (tr.classList.contains('on')) open.push(i); });
     setTimeout(function () {
       renderStat();
@@ -4828,6 +5257,7 @@
   }
   $('binBtn').addEventListener('click', function () { purgeExpired(); renderBin(); $('binModal').className = 'modal show'; });
   $('binClose').addEventListener('click', function () { $('binModal').className = 'modal'; });
+  $('binX').addEventListener('click', function () { $('binModal').className = 'modal'; });
   $('binModal').addEventListener('click', function (e) { if (e.target === this) this.className = 'modal'; });
   $('binBody').addEventListener('click', function (ev) {
     var b = ev.target.closest('button[data-btid]'); if (!b) return;
@@ -5004,7 +5434,7 @@
   }
 
   /* ---------- ভাষা: বাংলা / English ---------- */
-  var I18N_EN = {"🧪 ডেমো ডেটা লোড করুন":"🧪 Load Demo Data","🧹 ডেমো ডেটা মুছুন":"🧹 Remove Demo Data","🖥️ পিসি মোড":"🖥️ PC Mode","☀️ লাইট মোড":"☀️ Light Mode","আয়-ব্যয় ও বিক্রয় ট্র্যাকার (Income, Expense & Sales Tracker)":"Income, Expense & Sales Tracker","📱 মোবাইল মোড":"📱 Mobile Mode","🌙 ডার্ক মোড":"🌙 Dark Mode","💾 ব্যাকআপ":"💾 Backup","☁️ ক্লাউড":"☁️ Cloud","মোট বিক্রি (Income)":"Total Sales (Income)","বিস্তারিত দেখুন ›":"View details ›","মোট খরচ (Expense)":"Total Expense","চলতি লাভ/ক্ষতি (Net Profit/Loss)":"Net Profit/Loss","মোট বকেয়া / পাওনা (Due)":"Total Due / Receivable","নতুন অর্ডার":"New Order","খরচ":"Expenses","পেন্ডিং অর্ডার":"Pending Orders","পুরাতন ক্রেতা":"Past Customers","বকেয়া":"Dues","লেনদেন":"Transactions","রিপোর্ট":"Reports","বিন":"Bin","💰 নতুন আয় / বিক্রি যোগ করুন":"💰 Add New Income / Sale","কেক":"Cake","কাপকেক":"Cupcake","ডেজার্ট":"Dessert","কাস্টম অর্ডার":"Custom Order","অন্যান্য":"Other","➕ নতুন ক্যাটাগরি যোগ করুন…":"➕ Add new category…","আয় সংরক্ষণ করুন":"Save Income","বাতিল (Cancel)":"Cancel","🧾 নতুন খরচ যোগ করুন":"🧾 Add New Expense","কাঁচামাল":"Raw Materials","প্যাকেজিং":"Packaging","ডেলিভারি":"Delivery","গ্যাস/বিদ্যুৎ":"Gas/Electricity","মজুরি":"Wages","বিজ্ঞাপন":"Advertising","🧾 ক্যাশ মেমো স্ক্যান":"🧾 Cash Memo Scan","(ঐচ্ছিক, সর্বোচ্চ ৬টি ছবি)":"(Optional, up to 6 photos)","📸 ছবি তুলুন":"📸 Take Photo","🖼️ গ্যালারি থেকে নিন":"🖼️ Choose from Gallery","ছবি এই ডিভাইসে সংরক্ষিত থাকে; ক্লাউড সিঙ্ক চালু থাকলে আপনার Firebase-এও যাবে। খরচ সংরক্ষণ করলে মেমো সেভ হবে।":"Photos are saved on this device; if cloud sync is on, they also go to your Firebase. The memo is saved when you save the expense.","খরচ সংরক্ষণ করুন":"Save Expense","টাকার ঘরে বাংলা (৫০০) বা ইংরেজি (500) – যেকোনো সংখ্যা লিখতে পারবেন।":"You can type amounts in Bengali (৫০০) or English (500) digits.","📦 নতুন অর্ডার নিন":"📦 Take New Order","👤 কাস্টমারের ছবি":"👤 Customer Photo","(ঐচ্ছিক, সর্বোচ্চ ৩টি — “পুরাতন ক্রেতা” তালিকায় সেভ থাকবে)":"(Optional, up to 3 — saved in the “Past Customers” list)","🗓️ ডেলিভারির তারিখ":"🗓️ Delivery Date","⏰ সময় (ঐচ্ছিক)":"⏰ Time (optional)","🏷️ আয়ের ক্যাটাগরি":"🏷️ Income Category","📌 অবস্থা":"📌 Status","চলমান":"In Progress","ডেলিভারি হয়েছে":"Delivered","বাতিল":"Cancelled","🎂 কেকের ছবি / ডিজাইন":"🎂 Cake Photo / Design","ক্লাউড সিঙ্ক চালু থাকলে ছবি আপনার Firebase-এও যাবে। অর্ডার সংরক্ষণ করলে ছবি সেভ হবে।":"If cloud sync is on, photos also go to your Firebase. The photo is saved when you save the order.","অর্ডার সংরক্ষণ করুন":"Save Order","অগ্রিম/পেমেন্ট নিলে তা নিজে থেকেই “আয়ের তালিকায়” যোগ হয়ে যাবে, বাকিটা “বকেয়া” হিসেবে থাকবে।":"Any advance/payment received is automatically added to the “Income list”; the rest stays as “Due”.","📦 পেন্ডিং অর্ডার":"📦 Pending Orders","➕ নতুন অর্ডার":"➕ New Order","🕒 চলমান":"🕒 In Progress","⏰ আজ ও দেরি":"⏰ Today & Overdue","💳 বকেয়া":"💳 Due","✅ ডেলিভারি হয়েছে":"✅ Delivered","🚫 বাতিল":"🚫 Cancelled","সব":"All","এখনো কোনো অর্ডার নেই — “নতুন অর্ডার” ট্যাব থেকে প্রথম অর্ডারটি যোগ করুন":"No orders yet — add your first order from the “New Order” tab","💳 বকেয়া / পাওনা":"💳 Dues / Receivables","মোট বকেয়া":"Total Due","ডেলিভারি হয়েছে, টাকা বাকি":"Delivered, payment pending","চলমান অর্ডারের বাকি":"Balance on ongoing orders","🎉 কোনো বকেয়া নেই":"🎉 No dues","✏️ ক্রেতার তথ্য এডিট করুন":"✏️ Edit Customer Info","📷 ছবি যোগ করুন (সর্বোচ্চ ৩টি)":"📷 Add Photo (up to 3)","আপডেট করুন":"Update","📒 পুরাতন ক্রেতার তালিকা":"📒 Past Customers List","মোট ক্রেতা":"Total Customers","নিয়মিত (৩+ অর্ডার)":"Regular (3+ orders)","সর্বশেষ অর্ডার আগে":"Latest order first","নাম অনুযায়ী":"By name","বেশি কেনা আগে":"Highest spenders first","বেশি বকেয়া আগে":"Highest dues first","এখনো কোনো ক্রেতা নেই — অর্ডার নিলেই ক্রেতা নিজে থেকে এখানে যোগ হবে":"No customers yet — customers are added here automatically when you take an order","🔍 ফিল্টার ও সার্চ":"🔍 Filter & Search","📅 সব সময়":"📅 All Time","এই মাস":"This Month","গত মাস":"Last Month","এই বছর":"This Year","মাস বেছে নিন…":"Choose month…","তারিখ থেকে – পর্যন্ত…":"Date range…","জানুয়ারি":"January","ফেব্রুয়ারি":"February","মার্চ":"March","এপ্রিল":"April","মে":"May","জুন":"June","জুলাই":"July","আগস্ট":"August","সেপ্টেম্বর":"September","অক্টোবর":"October","নভেম্বর":"November","ডিসেম্বর":"December","🏷️ সব ক্যাটাগরি":"🏷️ All Categories","ফিল্টার মুছুন":"Clear Filters","💰 আয়ের তালিকা (Income)":"💰 Income List","তারিখ":"Date","বিবরণ":"Description","টাকা":"Amount","অ্যাকশন":"Actions","এখনো কোনো এন্ট্রি নেই":"No entries yet","🧾 ব্যয়ের তালিকা (Expense)":"🧾 Expense List","📊 রিপোর্ট ও চার্ট":"📊 Reports & Charts","🖨️ প্রিন্ট / PDF":"🖨️ Print / PDF","বিক্রি":"Sales","লাভ/ক্ষতি":"Profit/Loss","লাভের হার":"Profit Margin","📈 গত মাসের তুলনায় এ মাস":"📈 This Month vs Last Month","(ফিল্টার নির্বিশেষে, টাকার অঙ্কে)":"(regardless of filters, in amounts)","একই তারিখ পর্যন্ত":"Same date range","পুরো মাস":"Full month","💰 বিক্রি":"💰 Sales","■ অপরিবর্তিত":"■ Unchanged","🧾 খরচ":"🧾 Expenses","📈 লাভ/ক্ষতি":"📈 Profit/Loss","📆 মাসভিত্তিক বিক্রি ও খরচ":"📆 Monthly Sales & Expenses","(সর্বশেষ ১২ মাস)":"(last 12 months)","কোনো ডেটা নেই":"No data","মাস":"Month","📅 বার অনুযায়ী বিক্রি":"📅 Sales by Weekday","(বর্তমান ফিল্টার/সময়কাল অনুযায়ী)":"(based on current filter/period)","কোনো বিক্রির ডেটা নেই":"No sales data","💰 আয়ের ক্যাটাগরি":"💰 Income Categories","🧾 খরচের ক্যাটাগরি":"🧾 Expense Categories","💾 ব্যাকআপ ও রিস্টোর":"💾 Backup & Restore","📥 Excel/CSV ডাউনলোড":"📥 Download Excel/CSV","💾 JSON ব্যাকআপ":"💾 JSON Backup","📤 ব্যাকআপ ফেরত আনুন":"📤 Restore Backup","☁️ ক্লাউড সিঙ্ক সেটিং":"☁️ Cloud Sync Settings","ব্যাকআপ ফাইল (CSV বা JSON) বেছে নিলে আগের সব এন্ট্রি ফেরত আনা যাবে। ব্রাউজার ক্লিয়ার করার আগে বা ফোন বদলানোর আগে ব্যাকআপ নামিয়ে রাখুন। JSON ব্যাকআপে অর্ডারও থাকে। অথবা “ক্লাউড সিঙ্ক” চালু করলে ফোন ও কম্পিউটারে একই হিসাব নিজে থেকেই মিলে থাকবে।":"Choose a backup file (CSV or JSON) to bring back all earlier entries. Download a backup before clearing the browser or switching phones. JSON backups also include orders, customers and photos.","🔐 নিরাপত্তা ও টুলস":"🔐 Security & Tools","🔒 PIN / ফিঙ্গারপ্রিন্ট লক":"🔒 PIN / Fingerprint Lock","🗑 রিসাইকেল বিন":"🗑 Recycle Bin","📲 ফোনে অ্যাপ ইনস্টল":"📲 Install App on Phone","ডিলিট করা এন্ট্রি, অর্ডার ও ক্রেতা ৩০ দিন রিসাইকেল বিনে থাকে। ডিলিটের পর কয়েক সেকেন্ড “Undo” বাটনও আসে।":"Deleted entries, orders and customers stay in the recycle bin for 30 days. An “Undo” button also appears for a few seconds after deleting.","➕ যোগ করুন (ডুপ্লিকেট বাদ দিয়ে)":"➕ Add (skip duplicates)","🔄 সব বদলে দিন (বর্তমান ডেটা মুছবে)":"🔄 Replace all (erases current data)","বন্ধ করুন":"Close","PIN দিয়ে খুলুন":"Unlock with PIN","🔓 আনলক":"🔓 Unlock","👆 ফিঙ্গারপ্রিন্ট দিয়ে খুলুন":"👆 Unlock with Fingerprint","PIN ভুলে গেছেন?":"Forgot PIN?","লক বন্ধ করুন":"Turn Off Lock","💾 ব্যাকআপ নিন (ফাইল নামান)":"💾 Take Backup (download file)","📤 ব্যাকআপ শেয়ার করুন (Drive / WhatsApp / ইমেইল)":"📤 Share Backup (Drive / WhatsApp / Email)","📥 ব্যাকআপ ফেরত আনুন (রিস্টোর)":"📥 Restore Backup","📊 Excel/CSV ডাউনলোড":"📊 Download Excel/CSV","টিপস: ফাইলটি Google Drive বা নিজের WhatsApp-এ পাঠিয়ে রাখলে ফোন হারালেও হিসাব ফেরত পাবেন।":"Tip: Send the file to Google Drive or your own WhatsApp — you can recover your accounts even if you lose your phone.","🔒 অ্যাপ লক":"🔒 App Lock","ডিলিট করা জিনিস ৩০ দিন এখানে থাকে, তারপর নিজে থেকে মুছে যায়।":"Deleted items stay here for 30 days, then are removed automatically.","বিন খালি করুন":"Empty Bin","🗑 বকেয়া ডিলিট":"🗑 Delete Due","হ্যাঁ, বকেয়া মুছুন":"Yes, delete due","💵 পেমেন্ট গ্রহণ":"💵 Receive Payment","✅ পেমেন্ট সংরক্ষণ করুন":"✅ Save Payment","☁️ ক্লাউড সিঙ্ক":"☁️ Cloud Sync","⚪ ক্লাউড সিঙ্ক বন্ধ আছে।":"⚪ Cloud sync is off.","ফোন, কম্পিউটার — সব ডিভাইসে একই হিসাব রাখতে আপনার নিজের (বিনামূল্যের) Firebase ডেটাবেস ব্যবহার করা হয়। ডেটা শুধু আপনার ডেটাবেসেই যায়।":"To keep the same accounts on every device (phone, computer), your own (free) Firebase database is used. Data goes only to your own database.","📖 প্রথমবার সেটআপের ধাপ (৫ মিনিটের কাজ)":"📖 First-time setup (5 minutes)","এ Google অ্যাকাউন্ট দিয়ে ঢুকে":"— sign in with your Google account, then","চাপুন, যেকোনো নাম দিন (Analytics বন্ধ রাখতে পারেন)।":"and give any name (you can turn Analytics off).","বাম মেনু থেকে":"From the left menu, open","চাপুন। লোকেশন (যেমন Singapore) বেছে":"Choose a location (e.g. Singapore), then select","এ Enable করুন।":"and Enable it.","ট্যাবে সব লেখা মুছে নিচের Rules পেস্ট করে":"tab, clear all text, paste the Rules below, then click","চাপুন:":"Publish:","📋 Rules কপি করুন":"📋 Copy Rules","ট্যাবের ওপরে দেখানো লিংক (https://…firebasedatabase.app) কপি করে নিচের “Database URL” ঘরে বসান।":"Copy the link shown at the top of the Data tab (https://…firebasedatabase.app) and paste it in the “Database URL” box below.","নিজের একটি গোপন কোড (কমপক্ষে ১৬ অক্ষর, ইংরেজি অক্ষর/সংখ্যা) ঠিক করে “সিঙ্ক কোড” ঘরে লিখুন ও কোথাও লিখে রাখুন, তারপর “সংযুক্ত করুন” চাপুন।":"Choose your own secret code (at least 16 characters, English letters/numbers), type it in the “Sync code” box and write it down somewhere, then press “Connect”.","অন্য ডিভাইসে":"On another device,","একই URL ও একই কোড দিলেই হিসাব মিলে যাবে।":"enter the same URL and the same code and your accounts will match.","Firebase-এর মেনুর নাম সময়ের সাথে একটু বদলাতে পারে।":"Firebase menu names may change slightly over time.","সিঙ্ক কোড (পাসওয়ার্ডের মতো গোপন রাখুন)":"Sync code (keep secret like a password)","⚠️ যার কাছে URL ও কোড দুটোই থাকবে সে এই হিসাব দেখতে ও বদলাতে পারবে। কাউকে দেবেন না।":"⚠️ Anyone who has both the URL and the code can view and change these accounts. Don't share them.","🔗 সংযুক্ত করে সিঙ্ক শুরু করুন":"🔗 Connect & Start Sync","🔄 এখনই সিঙ্ক করুন":"🔄 Sync Now","⏹ সিঙ্ক বন্ধ করুন":"⏹ Stop Sync","🤝 ডেটা কীভাবে মেলাবেন?":"🤝 How to merge data?","🤝 দুটো মিলিয়ে নিন (একই এন্ট্রি বাদ)":"🤝 Merge both (duplicates skipped)","☁️ ক্লাউডের ডেটা নিন (এই ডিভাইসের ডেটা বদলাবে)":"☁️ Take cloud data (replaces this device's data)","📱 এই ডিভাইসের ডেটা দিন (ক্লাউডের ডেটা বদলাবে)":"📱 Use this device's data (replaces cloud data)","📎 ক্যাশ মেমো":"📎 Cash Memo","📤 অর্ডারের বিবরণ":"📤 Order Details","📋 টেক্সট কপি করুন":"📋 Copy Text","📤 শেয়ার করুন":"📤 Share","চলতি লাভ/ক্ষতি":"Net Profit/Loss","Safwan Treats © — ডেটা আপনার ব্রাউজারে সংরক্ষিত থাকে; ক্লাউড সিঙ্ক চালু করলে আপনার নিজের Firebase ডেটাবেসেও কপি থাকে।":"Safwan Treats © — Data is stored in your browser; if cloud sync is on, a copy also stays in your own Firebase database.","বিস্তারিত দেখুন":"View details","বকেয়ার তালিকা দেখুন":"View dues list","বিক্রির বিবরণ (যেমন: চকলেট কেক ১ পাউন্ড)":"Sale description (e.g. Chocolate cake 1 lb)","টাকা (৫০০ বা 500)":"Amount (500)","ক্যাটাগরি":"Category","খরচের বিবরণ (যেমন: ময়দা, ডিম, প্যাকেট)":"Expense description (e.g. flour, eggs, packets)","কাস্টমারের নাম":"Customer name","ফোন / WhatsApp নম্বর":"Phone / WhatsApp number","কী অর্ডার (যেমন: চকলেট কেক ২ পাউন্ড, নামসহ)":"Order (e.g. Chocolate cake 2 lb, with name)","ডেলিভারির ঠিকানা (ঐচ্ছিক)":"Delivery address (optional)","অর্ডারের দাম (৳)":"Order price (৳)","ডেলিভারি চার্জ (৳) — ঐচ্ছিক":"Delivery charge (৳) — optional","অগ্রিম পেয়েছি (৳) — ঐচ্ছিক":"Advance received (৳) — optional","নোট (ঐচ্ছিক) — যেমন: কেকের ওপর “Happy Birthday Rafi”":"Note (optional) — e.g. “Happy Birthday Rafi” on the cake","Facebook ইউজারনেম বা প্রোফাইল লিংক (Messenger-এর জন্য, ঐচ্ছিক)":"Facebook username or profile link (for Messenger, optional)","🔎 নাম, ফোন বা অর্ডার খুঁজুন":"🔎 Search name, phone or order","🔎 কাস্টমারের নাম, ফোন বা অর্ডার খুঁজুন":"🔎 Search customer name, phone or order","ক্রেতার নাম":"Customer name","ঠিকানা":"Address","Facebook / Messenger নাম বা লিংক":"Facebook / Messenger name or link","বিশেষ নোট (যেমন: জন্মদিন ১২ মার্চ, চকলেট পছন্দ)":"Special note (e.g. birthday 12 March, likes chocolate)","🔎 নাম, ফোন বা ঠিকানা খুঁজুন":"🔎 Search name, phone or address","সাজান":"Sort","সময়কাল":"Period","বছর":"Year","শুরুর তারিখ":"Start date","শেষ তারিখ":"End date","🔎 বিবরণ বা ক্যাটাগরি খুঁজুন":"🔎 Search description or category","রিকভারি শব্দ":"Recovery word","টাকা (৳)":"Amount (৳)","কমপক্ষে ১৬ অক্ষর":"At least 16 characters","Safwan Treats – আয়-ব্যয় ট্র্যাকার":"Safwan Treats – Income & Expense Tracker"};
+  var I18N_EN = {"💾 ব্যাকআপ নিন":"💾 Take Backup","📥 ব্যাকআপ ফেরত আনুন":"📥 Restore Backup","আজই (টেস্ট)":"Today (test)","⏰ ব্যাকআপ রিমাইন্ডার:":"⏰ Backup reminder:","৩ দিন পর পর":"Every 3 days","৭ দিন পর পর":"Every 7 days","১৫ দিন পর পর":"Every 15 days","৩০ দিন পর পর":"Every 30 days","নোট: Excel/CSV শুধু আয়-খরচের তালিকা, তাই এটা নামালে ব্যাকআপ রিমাইন্ডার রিসেট হয় না। রিমাইন্ডার রিসেট হয় শুধু JSON ব্যাকআপ নিলে।":"Note: Excel/CSV contains only the income-expense list, so downloading it does not reset the backup reminder. Only a JSON backup resets it.","🧪 ডেমো ডেটা লোড করুন":"🧪 Load Demo Data","🧹 ডেমো ডেটা মুছুন":"🧹 Remove Demo Data","🖥️ পিসি মোড":"🖥️ PC Mode","☀️ লাইট মোড":"☀️ Light Mode","আয়-ব্যয় ও বিক্রয় ট্র্যাকার (Income, Expense & Sales Tracker)":"Income, Expense & Sales Tracker","📱 মোবাইল মোড":"📱 Mobile Mode","🌙 ডার্ক মোড":"🌙 Dark Mode","💾 ব্যাকআপ":"💾 Backup","☁️ ক্লাউড":"☁️ Cloud","মোট বিক্রি (Income)":"Total Sales (Income)","বিস্তারিত দেখুন ›":"View details ›","মোট খরচ (Expense)":"Total Expense","চলতি লাভ/ক্ষতি (Net Profit/Loss)":"Net Profit/Loss","মোট বকেয়া / পাওনা (Due)":"Total Due / Receivable","নতুন অর্ডার":"New Order","খরচ":"Expenses","পেন্ডিং অর্ডার":"Pending Orders","পুরাতন ক্রেতা":"Past Customers","বকেয়া":"Dues","লেনদেন":"Transactions","রিপোর্ট":"Reports","বিন":"Bin","💰 নতুন আয় / বিক্রি যোগ করুন":"💰 Add New Income / Sale","কেক":"Cake","কাপকেক":"Cupcake","ডেজার্ট":"Dessert","কাস্টম অর্ডার":"Custom Order","অন্যান্য":"Other","➕ নতুন ক্যাটাগরি যোগ করুন…":"➕ Add new category…","আয় সংরক্ষণ করুন":"Save Income","বাতিল (Cancel)":"Cancel","🧾 নতুন খরচ যোগ করুন":"🧾 Add New Expense","কাঁচামাল":"Raw Materials","প্যাকেজিং":"Packaging","ডেলিভারি":"Delivery","গ্যাস/বিদ্যুৎ":"Gas/Electricity","মজুরি":"Wages","বিজ্ঞাপন":"Advertising","🧾 ক্যাশ মেমো স্ক্যান":"🧾 Cash Memo Scan","(ঐচ্ছিক, সর্বোচ্চ ৬টি ছবি)":"(Optional, up to 6 photos)","📸 ছবি তুলুন":"📸 Take Photo","🖼️ গ্যালারি থেকে নিন":"🖼️ Choose from Gallery","ছবি এই ডিভাইসে সংরক্ষিত থাকে; ক্লাউড সিঙ্ক চালু থাকলে আপনার Firebase-এও যাবে। খরচ সংরক্ষণ করলে মেমো সেভ হবে।":"Photos are saved on this device; if cloud sync is on, they also go to your Firebase. The memo is saved when you save the expense.","খরচ সংরক্ষণ করুন":"Save Expense","টাকার ঘরে বাংলা (৫০০) বা ইংরেজি (500) – যেকোনো সংখ্যা লিখতে পারবেন।":"You can type amounts in Bengali (৫০০) or English (500) digits.","📦 নতুন অর্ডার নিন":"📦 Take New Order","👤 কাস্টমারের ছবি":"👤 Customer Photo","(ঐচ্ছিক, সর্বোচ্চ ৩টি — “পুরাতন ক্রেতা” তালিকায় সেভ থাকবে)":"(Optional, up to 3 — saved in the “Past Customers” list)","🗓️ ডেলিভারির তারিখ":"🗓️ Delivery Date","⏰ সময় (ঐচ্ছিক)":"⏰ Time (optional)","🏷️ আয়ের ক্যাটাগরি":"🏷️ Income Category","📌 অবস্থা":"📌 Status","চলমান":"In Progress","ডেলিভারি হয়েছে":"Delivered","বাতিল":"Cancelled","🎂 কেকের ছবি / ডিজাইন":"🎂 Cake Photo / Design","ক্লাউড সিঙ্ক চালু থাকলে ছবি আপনার Firebase-এও যাবে। অর্ডার সংরক্ষণ করলে ছবি সেভ হবে।":"If cloud sync is on, photos also go to your Firebase. The photo is saved when you save the order.","অর্ডার সংরক্ষণ করুন":"Save Order","অগ্রিম/পেমেন্ট নিলে তা নিজে থেকেই “আয়ের তালিকায়” যোগ হয়ে যাবে, বাকিটা “বকেয়া” হিসেবে থাকবে।":"Any advance/payment received is automatically added to the “Income list”; the rest stays as “Due”.","📦 পেন্ডিং অর্ডার":"📦 Pending Orders","➕ নতুন অর্ডার":"➕ New Order","🕒 চলমান":"🕒 In Progress","⏰ আজ ও দেরি":"⏰ Today & Overdue","💳 বকেয়া":"💳 Due","✅ ডেলিভারি হয়েছে":"✅ Delivered","🚫 বাতিল":"🚫 Cancelled","সব":"All","এখনো কোনো অর্ডার নেই — “নতুন অর্ডার” ট্যাব থেকে প্রথম অর্ডারটি যোগ করুন":"No orders yet — add your first order from the “New Order” tab","💳 বকেয়া / পাওনা":"💳 Dues / Receivables","মোট বকেয়া":"Total Due","ডেলিভারি হয়েছে, টাকা বাকি":"Delivered, payment pending","চলমান অর্ডারের বাকি":"Balance on ongoing orders","🎉 কোনো বকেয়া নেই":"🎉 No dues","✏️ ক্রেতার তথ্য এডিট করুন":"✏️ Edit Customer Info","📷 ছবি যোগ করুন (সর্বোচ্চ ৩টি)":"📷 Add Photo (up to 3)","আপডেট করুন":"Update","📒 পুরাতন ক্রেতার তালিকা":"📒 Past Customers List","মোট ক্রেতা":"Total Customers","নিয়মিত (৩+ অর্ডার)":"Regular (3+ orders)","সর্বশেষ অর্ডার আগে":"Latest order first","নাম অনুযায়ী":"By name","বেশি কেনা আগে":"Highest spenders first","বেশি বকেয়া আগে":"Highest dues first","এখনো কোনো ক্রেতা নেই — অর্ডার নিলেই ক্রেতা নিজে থেকে এখানে যোগ হবে":"No customers yet — customers are added here automatically when you take an order","🔍 ফিল্টার ও সার্চ":"🔍 Filter & Search","📅 সব সময়":"📅 All Time","এই মাস":"This Month","গত মাস":"Last Month","এই বছর":"This Year","মাস বেছে নিন…":"Choose month…","তারিখ থেকে – পর্যন্ত…":"Date range…","জানুয়ারি":"January","ফেব্রুয়ারি":"February","মার্চ":"March","এপ্রিল":"April","মে":"May","জুন":"June","জুলাই":"July","আগস্ট":"August","সেপ্টেম্বর":"September","অক্টোবর":"October","নভেম্বর":"November","ডিসেম্বর":"December","🏷️ সব ক্যাটাগরি":"🏷️ All Categories","ফিল্টার মুছুন":"Clear Filters","💰 আয়ের তালিকা (Income)":"💰 Income List","তারিখ":"Date","বিবরণ":"Description","টাকা":"Amount","অ্যাকশন":"Actions","এখনো কোনো এন্ট্রি নেই":"No entries yet","🧾 ব্যয়ের তালিকা (Expense)":"🧾 Expense List","📊 রিপোর্ট ও চার্ট":"📊 Reports & Charts","🖨️ প্রিন্ট / PDF":"🖨️ Print / PDF","বিক্রি":"Sales","লাভ/ক্ষতি":"Profit/Loss","লাভের হার":"Profit Margin","📈 গত মাসের তুলনায় এ মাস":"📈 This Month vs Last Month","(ফিল্টার নির্বিশেষে, টাকার অঙ্কে)":"(regardless of filters, in amounts)","একই তারিখ পর্যন্ত":"Same date range","পুরো মাস":"Full month","💰 বিক্রি":"💰 Sales","■ অপরিবর্তিত":"■ Unchanged","🧾 খরচ":"🧾 Expenses","📈 লাভ/ক্ষতি":"📈 Profit/Loss","📆 মাসভিত্তিক বিক্রি ও খরচ":"📆 Monthly Sales & Expenses","(সর্বশেষ ১২ মাস)":"(last 12 months)","কোনো ডেটা নেই":"No data","মাস":"Month","📅 বার অনুযায়ী বিক্রি":"📅 Sales by Weekday","(বর্তমান ফিল্টার/সময়কাল অনুযায়ী)":"(based on current filter/period)","কোনো বিক্রির ডেটা নেই":"No sales data","💰 আয়ের ক্যাটাগরি":"💰 Income Categories","🧾 খরচের ক্যাটাগরি":"🧾 Expense Categories","💾 ব্যাকআপ ও রিস্টোর":"💾 Backup & Restore","📥 Excel/CSV ডাউনলোড":"📥 Download Excel/CSV","💾 JSON ব্যাকআপ":"💾 JSON Backup","📤 ব্যাকআপ ফেরত আনুন":"📤 Restore Backup","☁️ ক্লাউড সিঙ্ক সেটিং":"☁️ Cloud Sync Settings","ব্যাকআপ ফাইল (CSV বা JSON) বেছে নিলে আগের সব এন্ট্রি ফেরত আনা যাবে। ব্রাউজার ক্লিয়ার করার আগে বা ফোন বদলানোর আগে ব্যাকআপ নামিয়ে রাখুন। JSON ব্যাকআপে অর্ডার, সঞ্চয় ও রিসাইকেল বিনও থাকে। অথবা “ক্লাউড সিঙ্ক” চালু করলে ফোন ও কম্পিউটারে একই হিসাব নিজে থেকেই মিলে থাকবে।":"Choose a backup file (CSV or JSON) to bring back all earlier entries. Download a backup before clearing the browser or switching phones. JSON backups also include orders, customers and photos.","🔐 নিরাপত্তা ও টুলস":"🔐 Security & Tools","🔒 PIN / ফিঙ্গারপ্রিন্ট লক":"🔒 PIN / Fingerprint Lock","🗑 রিসাইকেল বিন":"🗑 Recycle Bin","📲 ফোনে অ্যাপ ইনস্টল":"📲 Install App on Phone","ডিলিট করা এন্ট্রি, অর্ডার ও ক্রেতা ৩০ দিন রিসাইকেল বিনে থাকে। ডিলিটের পর কয়েক সেকেন্ড “Undo” বাটনও আসে।":"Deleted entries, orders and customers stay in the recycle bin for 30 days. An “Undo” button also appears for a few seconds after deleting.","➕ যোগ করুন (ডুপ্লিকেট বাদ দিয়ে)":"➕ Add (skip duplicates)","🔄 সব বদলে দিন (বর্তমান ডেটা মুছবে)":"🔄 Replace all (erases current data)","বন্ধ করুন":"Close","PIN দিয়ে খুলুন":"Unlock with PIN","🔓 আনলক":"🔓 Unlock","👆 ফিঙ্গারপ্রিন্ট দিয়ে খুলুন":"👆 Unlock with Fingerprint","PIN ভুলে গেছেন?":"Forgot PIN?","লক বন্ধ করুন":"Turn Off Lock","💾 ব্যাকআপ নিন (ফাইল নামান)":"💾 Take Backup (download file)","📤 ব্যাকআপ শেয়ার করুন (Drive / WhatsApp / ইমেইল)":"📤 Share Backup (Drive / WhatsApp / Email)","📥 ব্যাকআপ ফেরত আনুন (রিস্টোর)":"📥 Restore Backup","📊 Excel/CSV ডাউনলোড":"📊 Download Excel/CSV","টিপস: ফাইলটি Google Drive বা নিজের WhatsApp-এ পাঠিয়ে রাখলে ফোন হারালেও হিসাব ফেরত পাবেন।":"Tip: Send the file to Google Drive or your own WhatsApp — you can recover your accounts even if you lose your phone.","🔒 অ্যাপ লক":"🔒 App Lock","ডিলিট করা জিনিস ৩০ দিন এখানে থাকে, তারপর নিজে থেকে মুছে যায়।":"Deleted items stay here for 30 days, then are removed automatically.","বিন খালি করুন":"Empty Bin","🗑 বকেয়া ডিলিট":"🗑 Delete Due","হ্যাঁ, বকেয়া মুছুন":"Yes, delete due","💵 পেমেন্ট গ্রহণ":"💵 Receive Payment","✅ পেমেন্ট সংরক্ষণ করুন":"✅ Save Payment","☁️ ক্লাউড সিঙ্ক":"☁️ Cloud Sync","⚪ ক্লাউড সিঙ্ক বন্ধ আছে।":"⚪ Cloud sync is off.","ফোন, কম্পিউটার — সব ডিভাইসে একই হিসাব রাখতে আপনার নিজের (বিনামূল্যের) Firebase ডেটাবেস ব্যবহার করা হয়। ডেটা শুধু আপনার ডেটাবেসেই যায়।":"To keep the same accounts on every device (phone, computer), your own (free) Firebase database is used. Data goes only to your own database.","📖 প্রথমবার সেটআপের ধাপ (৫ মিনিটের কাজ)":"📖 First-time setup (5 minutes)","এ Google অ্যাকাউন্ট দিয়ে ঢুকে":"— sign in with your Google account, then","চাপুন, যেকোনো নাম দিন (Analytics বন্ধ রাখতে পারেন)।":"and give any name (you can turn Analytics off).","বাম মেনু থেকে":"From the left menu, open","চাপুন। লোকেশন (যেমন Singapore) বেছে":"Choose a location (e.g. Singapore), then select","এ Enable করুন।":"and Enable it.","ট্যাবে সব লেখা মুছে নিচের Rules পেস্ট করে":"tab, clear all text, paste the Rules below, then click","চাপুন:":"Publish:","📋 Rules কপি করুন":"📋 Copy Rules","ট্যাবের ওপরে দেখানো লিংক (https://…firebasedatabase.app) কপি করে নিচের “Database URL” ঘরে বসান।":"Copy the link shown at the top of the Data tab (https://…firebasedatabase.app) and paste it in the “Database URL” box below.","নিজের একটি গোপন কোড (কমপক্ষে ১৬ অক্ষর, ইংরেজি অক্ষর/সংখ্যা) ঠিক করে “সিঙ্ক কোড” ঘরে লিখুন ও কোথাও লিখে রাখুন, তারপর “সংযুক্ত করুন” চাপুন।":"Choose your own secret code (at least 16 characters, English letters/numbers), type it in the “Sync code” box and write it down somewhere, then press “Connect”.","অন্য ডিভাইসে":"On another device,","একই URL ও একই কোড দিলেই হিসাব মিলে যাবে।":"enter the same URL and the same code and your accounts will match.","Firebase-এর মেনুর নাম সময়ের সাথে একটু বদলাতে পারে।":"Firebase menu names may change slightly over time.","সিঙ্ক কোড (পাসওয়ার্ডের মতো গোপন রাখুন)":"Sync code (keep secret like a password)","⚠️ যার কাছে URL ও কোড দুটোই থাকবে সে এই হিসাব দেখতে ও বদলাতে পারবে। কাউকে দেবেন না।":"⚠️ Anyone who has both the URL and the code can view and change these accounts. Don't share them.","🔗 সংযুক্ত করে সিঙ্ক শুরু করুন":"🔗 Connect & Start Sync","🔄 এখনই সিঙ্ক করুন":"🔄 Sync Now","⏹ সিঙ্ক বন্ধ করুন":"⏹ Stop Sync","🤝 ডেটা কীভাবে মেলাবেন?":"🤝 How to merge data?","🤝 দুটো মিলিয়ে নিন (একই এন্ট্রি বাদ)":"🤝 Merge both (duplicates skipped)","☁️ ক্লাউডের ডেটা নিন (এই ডিভাইসের ডেটা বদলাবে)":"☁️ Take cloud data (replaces this device's data)","📱 এই ডিভাইসের ডেটা দিন (ক্লাউডের ডেটা বদলাবে)":"📱 Use this device's data (replaces cloud data)","📎 ক্যাশ মেমো":"📎 Cash Memo","📤 অর্ডারের বিবরণ":"📤 Order Details","📋 টেক্সট কপি করুন":"📋 Copy Text","📤 শেয়ার করুন":"📤 Share","চলতি লাভ/ক্ষতি":"Net Profit/Loss","Safwan Treats © — ডেটা আপনার ব্রাউজারে সংরক্ষিত থাকে; ক্লাউড সিঙ্ক চালু করলে আপনার নিজের Firebase ডেটাবেসেও কপি থাকে।":"Safwan Treats © — Data is stored in your browser; if cloud sync is on, a copy also stays in your own Firebase database.","বিস্তারিত দেখুন":"View details","বকেয়ার তালিকা দেখুন":"View dues list","বিক্রির বিবরণ (যেমন: চকলেট কেক ১ পাউন্ড)":"Sale description (e.g. Chocolate cake 1 lb)","টাকা (৫০০ বা 500)":"Amount (500)","ক্যাটাগরি":"Category","খরচের বিবরণ (যেমন: ময়দা, ডিম, প্যাকেট)":"Expense description (e.g. flour, eggs, packets)","কাস্টমারের নাম":"Customer name","ফোন / WhatsApp নম্বর":"Phone / WhatsApp number","কী অর্ডার (যেমন: চকলেট কেক ২ পাউন্ড, নামসহ)":"Order (e.g. Chocolate cake 2 lb, with name)","ডেলিভারির ঠিকানা (ঐচ্ছিক)":"Delivery address (optional)","অর্ডারের দাম (৳)":"Order price (৳)","ডেলিভারি চার্জ (৳) — ঐচ্ছিক":"Delivery charge (৳) — optional","অগ্রিম পেয়েছি (৳) — ঐচ্ছিক":"Advance received (৳) — optional","নোট (ঐচ্ছিক) — যেমন: কেকের ওপর “Happy Birthday Rafi”":"Note (optional) — e.g. “Happy Birthday Rafi” on the cake","Facebook ইউজারনেম বা প্রোফাইল লিংক (Messenger-এর জন্য, ঐচ্ছিক)":"Facebook username or profile link (for Messenger, optional)","🔎 নাম, ফোন বা অর্ডার খুঁজুন":"🔎 Search name, phone or order","🔎 কাস্টমারের নাম, ফোন বা অর্ডার খুঁজুন":"🔎 Search customer name, phone or order","ক্রেতার নাম":"Customer name","ঠিকানা":"Address","Facebook / Messenger নাম বা লিংক":"Facebook / Messenger name or link","বিশেষ নোট (যেমন: জন্মদিন ১২ মার্চ, চকলেট পছন্দ)":"Special note (e.g. birthday 12 March, likes chocolate)","🔎 নাম, ফোন বা ঠিকানা খুঁজুন":"🔎 Search name, phone or address","সাজান":"Sort","সময়কাল":"Period","বছর":"Year","শুরুর তারিখ":"Start date","শেষ তারিখ":"End date","🔎 বিবরণ বা ক্যাটাগরি খুঁজুন":"🔎 Search description or category","রিকভারি শব্দ":"Recovery word","টাকা (৳)":"Amount (৳)","কমপক্ষে ১৬ অক্ষর":"At least 16 characters","Safwan Treats – আয়-ব্যয় ট্র্যাকার":"Safwan Treats – Income & Expense Tracker"};
   var langNow = 'bn', langBusy = false;
   var LANG_ATTRS = ['placeholder', 'title', 'aria-label'];
   function trText(n) {
@@ -5070,10 +5500,17 @@
       var d = Math.floor((Date.now() - last) / 864e5), dt = new Date(last);
       el.textContent = 'শেষ ব্যাকআপ: ' + dt.getDate() + '/' + (dt.getMonth() + 1) + '/' + dt.getFullYear() + (d > 0 ? ' (' + d + ' দিন আগে)' : ' (আজ)');
     } else el.textContent = 'এখনো কোনো ব্যাকআপ নেওয়া হয়নি। এখনই একটি নিয়ে রাখুন।';
+    var sel = $('bkDays'); if (sel) sel.value = String(bkLimit());
     openM('bkModal');
   }
   $('bkTopBtn').addEventListener('click', bkOpen);
+  $('bkDays').addEventListener('change', function () {
+    lsSet('safwanTreatsBkDays', this.value);
+    try { localStorage.removeItem('safwanTreatsBkSnooze'); } catch (e) {}
+    updBackupBanner(); toast(this.value === '0' ? '⏰ টেস্ট মোড: ব্যানার এখনই দেখাবে (ডেটা থাকলে)' : '⏰ রিমাইন্ডার: ' + this.value + ' দিন পর পর');
+  });
   $('bkClose').addEventListener('click', function () { closeM('bkModal'); });
+  $('bkX').addEventListener('click', function () { closeM('bkModal'); });
   $('bkModal').addEventListener('click', function (e) { if (e.target === this) closeM('bkModal'); });
   $('bkJson').addEventListener('click', function () { closeM('bkModal'); $('jsonBtn').click(); });
   $('bkShare').addEventListener('click', function () { closeM('bkModal'); window.__bkShare = true; $('jsonBtn').click(); setTimeout(function () { window.__bkShare = false; }, 15000); });
@@ -5084,19 +5521,32 @@
   var DEMO_E = '[ডেমো] ', DEMO_C = '(ডেমো) ';
   function dOff(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
   function demoExists() { return orders.some(function (o) { return o.customer.indexOf(DEMO_C) === 0; }) || entries.some(function (e) { return e.desc.indexOf(DEMO_E) === 0; }) || customers.some(function (c) { return c.name.indexOf(DEMO_C) === 0; }); }
+  function refreshSavTotal() {
+    try {
+      var arr = JSON.parse(localStorage.getItem('safwanTreatsSavings_v1') || '[]');
+      var t = arr.reduce(function (n, x) { return n + (Number(x.amount) || 0); }, 0);
+      var el = $('savTotal'); if (el) el.textContent = fmt(t);
+    } catch (e) {}
+  }
+  function bigDemoExists() { return orders.some(function (o) { return o.id === 1792000200000; }); }
   function loadDemo() {
-    var S = window.__demoSeed(), now = Date.now(), ids = {};
+    var S = window.__demoSeed(true), now = Date.now(), ids = {}, cids = {}, oids = {}, add = { c: 0, o: 0, e: 0, sv: 0, tr: 0 };
     entries.forEach(function (e) { ids[e.id] = 1; });
-    S.c.forEach(function (c) { var n = normalizeCustomer(c); if (n) { n.id = c.id; n.u = now; customers.push(n); } });
-    S.o.forEach(function (o) { var n = normalizeOrder(o); if (n) { n.id = o.id; n.u = now; orders.push(n); } });
-    S.e.forEach(function (e) { if (!ids[e.id]) { e.u = now; entries.push(e); } });
+    customers.forEach(function (c) { cids[c.id] = 1; });
+    orders.forEach(function (o) { oids[o.id] = 1; });
+    S.c.forEach(function (c) { if (cids[c.id]) return; var n = normalizeCustomer(c); if (n) { n.id = c.id; n.u = now; customers.push(n); add.c++; } });
+    S.o.forEach(function (o) { if (oids[o.id]) return; var n = normalizeOrder(o); if (n) { n.id = o.id; n.u = now; orders.push(n); add.o++; } });
+    S.e.forEach(function (e) { if (!ids[e.id]) { e.u = now; entries.push(e); add.e++; } });
     try {
       var sv = JSON.parse(localStorage.getItem('safwanTreatsSavings_v1') || '[]'); if (!Array.isArray(sv)) sv = [];
-      localStorage.setItem('safwanTreatsSavings_v1', JSON.stringify(sv.concat(S.sv)));
+      var sid = {}; sv.forEach(function (x) { sid[x.id] = 1; });
+      var svNew = S.sv.filter(function (x) { return !sid[x.id]; }); add.sv = svNew.length;
+      localStorage.setItem('safwanTreatsSavings_v1', JSON.stringify(sv.concat(svNew)));
     } catch (er) {}
-    S.tr.forEach(function (t) { trash.unshift(t); }); saveTrash(); updBinCnt();
-    afterDataChange();
-    toast('🧪 ডেমো ডেটা যোগ হয়েছে (' + S.o.length + 'টি অর্ডার, ' + S.e.length + 'টি আয়-খরচ, ' + S.c.length + 'জন ক্রেতা) — সব ট্যাব ঘুরে দেখুন');
+    var tl = {}; trash.forEach(function (t) { tl[t.label] = 1; });
+    S.tr.forEach(function (t) { if (tl[t.label]) return; trash.unshift(t); add.tr++; }); saveTrash(); updBinCnt();
+    afterDataChange(); refreshSavTotal();
+    toast('🧪 প্রচুর ডেমো ডেটা যোগ হয়েছে — ' + add.o + 'টি অর্ডার, ' + add.e + 'টি আয়-খরচ, ' + add.c + 'জন ক্রেতা, ' + add.sv + 'টি সঞ্চয় — সব ট্যাব ঘুরে দেখুন');
   }
   function clearDemo() {
     var now = Date.now(), oid = {};
@@ -5109,13 +5559,13 @@
       localStorage.setItem('safwanTreatsSavings_v1', JSON.stringify(sv.filter(function (x) { return String(x.note || '').indexOf('(ডেমো)') !== 0; })));
     } catch (er) {}
     trash = trash.filter(function (t) { return String(t.label || '').indexOf('ডেমো') < 0; }); saveTrash(); updBinCnt();
-    afterDataChange();
+    afterDataChange(); refreshSavTotal();
     toast('🧹 ডেমো ডেটা মুছে ফেলা হয়েছে — আপনার আসল ডেটা অক্ষত');
   }
   $('bkDemo').addEventListener('click', function () {
     closeM('bkModal');
-    if (demoExists()) { toast('ডেমো ডেটা আগে থেকেই আছে — আগে “ডেমো ডেটা মুছুন” চাপুন'); return; }
-    askChoice('🧪 ডেমো ডেটা লোড', 'প্রতিটি অপশন (আয়, খরচ, অর্ডার, বকেয়া, ক্রেতা, রিপোর্ট) ভরা অবস্থায় দেখার জন্য নমুনা ডেটা যোগ হবে। সবগুলোর নামের আগে <b>“ডেমো”</b> লেখা থাকবে। আপনার আসল ডেটা মুছবে না, আর যেকোনো সময় “ডেমো ডেটা মুছুন” দিয়ে শুধু ডেমোগুলো সরানো যাবে।<br><small>ক্লাউড সিঙ্ক চালু থাকলে ডেমো ডেটা ক্লাউডেও যাবে (মুছলে সেখান থেকেও যাবে)।</small>', [
+    if (bigDemoExists()) { toast('প্রচুর ডেমো ডেটা আগে থেকেই আছে — আগে “ডেমো ডেটা মুছুন” চাপুন'); return; }
+    askChoice('🧪 ডেমো ডেটা লোড', 'প্রতিটি অপশন (আয়, খরচ, অর্ডার, বকেয়া, ক্রেতা, সঞ্চয়, বিন, রিপোর্ট) ভরা অবস্থায় দেখার জন্য <b>প্রচুর</b> নমুনা ডেটা যোগ হবে — প্রায় ১৫০টি অর্ডার, ৬০ জন ক্রেতা, ৬০০+ আয়-খরচ ও ৭০+ সঞ্চয়। সবগুলোর নামের আগে <b>“ডেমো”</b> লেখা থাকবে। আপনার আসল ডেটা মুছবে না, আর যেকোনো সময় “ডেমো ডেটা মুছুন” দিয়ে শুধু ডেমোগুলো সরানো যাবে।<br><small>ক্লাউড সিঙ্ক চালু থাকলেও ডেমো ডেটা শুধু এই ডিভাইসে থাকবে, ক্লাউডে যাবে না।</small>', [
       { t: 'হ্যাঁ, ডেমো ডেটা যোগ করুন', cls: 'btn-save-inc', fn: loadDemo }, { t: 'বাতিল' }]);
   });
   $('bkDemoDel').addEventListener('click', function () {
@@ -5128,6 +5578,7 @@
   /* ---------- সাপ্তাহিক ব্যাকআপ রিমাইন্ডার ---------- */
   var BK_KEY = 'safwanTreatsLastBackup', BKB_KEY = 'safwanTreatsBkBase', BKS_KEY = 'safwanTreatsBkSnooze';
   window.markBackup = function () { lsSet(BK_KEY, String(Date.now())); try { localStorage.removeItem(BKS_KEY); } catch (e) {} updBackupBanner(); };
+  function bkLimit() { var raw = lsGet('safwanTreatsBkDays'); if (raw === null || raw === '') return 7; var n = Number(raw); return (n === 0 || n === 3 || n === 7 || n === 15 || n === 30) ? n : 7; }
   function updBackupBanner() {
     var el = $('bkBanner'); if (!el) return;
     var now = Date.now();
@@ -5135,9 +5586,9 @@
     var last = Number(lsGet(BK_KEY)) || 0, base = Number(lsGet(BKB_KEY)) || now;
     var ref = last || base, days = Math.floor((now - ref) / 864e5);
     var hasData = entries.length || orders.length || customers.length;
-    if (!hasData || days < 7 || now < (Number(lsGet(BKS_KEY)) || 0)) { el.className = 'bk-banner'; return; }
-    el.innerHTML = '<span>⚠️ ' + (last ? 'শেষ ব্যাকআপ নেওয়া হয়েছে ' + days + ' দিন আগে।' : 'এখনো কোনো ব্যাকআপ নেওয়া হয়নি (' + days + ' দিন)।') + ' হিসাব হারানোর আগে ব্যাকআপ নিন।</span>' +
-      '<span class="bk-b"><button type="button" class="btn btn-json btn-sm" id="bkNow">💾 JSON ব্যাকআপ নিন</button><button type="button" class="btn btn-cancel btn-sm" id="bkLater">পরে মনে করান</button></span>';
+    if (!hasData || days < bkLimit() || now < (Number(lsGet(BKS_KEY)) || 0)) { el.className = 'bk-banner'; return; }
+    el.innerHTML = '<span class="bk-txt">⚠️ ' + (last ? 'শেষ ব্যাকআপ ' + days + ' দিন আগে' : 'এখনো ব্যাকআপ নেওয়া হয়নি') + '</span>' +
+      '<span class="bk-b"><button type="button" class="btn btn-json btn-sm" id="bkNow">💾 ব্যাকআপ নিন</button><button type="button" class="btn btn-cancel btn-sm" id="bkLater">পরে মনে করান</button></span>';
     el.className = 'bk-banner show';
   }
   $('bkBanner').addEventListener('click', function (ev) {
@@ -5171,8 +5622,12 @@
 })();
 </script>
 <div class="modal" id="savModal"><div class="modal-box stat-box">
-  <h2>💰 সঞ্চয়</h2>
-  <div class="sd-stats"><div class="stat"><div class="label">মোট সঞ্চয়</div><div class="value" id="savModalTotal" style="color:#1f9d6b">৳ 0</div></div></div>
+  <div class="stat-fixed">
+    <div class="stat-head"><h2>💰 সঞ্চয়</h2><button type="button" class="pop-x" id="savClose" aria-label="বন্ধ করুন">✕</button></div>
+    <div class="sd-stats"><div class="stat"><div class="label">মোট সঞ্চয়</div><div class="value" id="savModalTotal" style="color:#1f9d6b">৳ 0</div></div></div>
+    <div class="ochips" id="savViews" style="margin:8px 0 0;"></div>
+  </div>
+  <div class="stat-scroll" id="savScroll">
   <div class="sv-form">
     <div class="sv-wd" id="savWd"></div>
     <input type="date" id="savDate" aria-label="তারিখ">
@@ -5180,9 +5635,8 @@
     <input type="text" id="savNote" class="sv-note" placeholder="নোট (ঐচ্ছিক)" autocomplete="off">
     <button type="button" class="sv-add" id="savAdd">➕ জমা করুন</button>
   </div>
-  <div class="ochips" id="savViews" style="margin-bottom:8px;"></div>
-  <div id="savList"></div>
-  <div class="modal-actions" style="margin-top:14px;"><button type="button" class="btn btn-cancel" id="savClose">বন্ধ করুন</button></div>
+    <div id="savList"></div>
+  </div>
 </div></div>
 <script>
 (function () {

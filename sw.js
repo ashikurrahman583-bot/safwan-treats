@@ -1,6 +1,6 @@
 /* Safwan Treats – Service Worker
    অ্যাপ অফলাইনে খোলার জন্য। নতুন সংস্করণ দিলে নিচের VERSION বদলে দিন। */
-var VERSION = 'safwan-treats-v1';
+var VERSION = 'safwan-treats-v3';
 var CORE = [
   './',
   './index.html',
