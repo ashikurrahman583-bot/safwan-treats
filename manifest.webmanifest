@@ -1,20 +1,16 @@
 {
   "name": "Safwan Treats – আয়-ব্যয় ট্র্যাকার",
   "short_name": "Safwan Treats",
-  "description": "আয়, ব্যয়, অর্ডার ও বিক্রির হিসাব রাখার অ্যাপ",
+  "description": "আয়, খরচ, অর্ডার, কাস্টমার ও সঞ্চয়ের হিসাব",
   "lang": "bn",
-  "dir": "ltr",
-  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#fff5f8",
   "theme_color": "#b01e68",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

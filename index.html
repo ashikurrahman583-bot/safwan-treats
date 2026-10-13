@@ -25,9 +25,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Safwan Treats">
-<title>Safwan Treats – আয়-ব্যয় ট্র্যাকার</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Safwan Treats – আয়-ব্যয় ট্র্যাকার</title>
 <script>
   (function () {
     var th = null;
@@ -364,8 +364,29 @@
   .crow-nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .crow-nm small { color: var(--muted); font-size: 0.78rem; }
   .crow-meta { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; font-size: 0.84rem; }
-  .crow-chev::after { content: '▾'; color: var(--muted); display: inline-block; transition: transform 0.2s; }
+  .crow-chev::after { content: '›'; color: var(--muted); display: inline-block; font-size: 1.5em; line-height: 1; }
+  .crow-sum:hover, .crow-sum:active { background: rgba(245,158,11,0.10); }
   .crow[open] .crow-chev::after { transform: rotate(180deg); }
+  .crow-pop { display: none !important; flex: 0 0 auto; width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: rgba(245,158,11,0.15); color: #f59e0b; font-size: 1.05rem; font-weight: 800; line-height: 1; cursor: pointer; font-family: inherit; }
+  .crow-pop:hover, .crow-pop:focus-visible { background: #f59e0b; color: #1a1a1a; outline: none; }
+  #custPopModal .modal-box { width: 100%; max-width: 560px; max-height: calc(100vh - 32px); overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 18px 16px; box-sizing: border-box; }
+  .oc2-phnote { margin-top: 10px; padding: 12px; border: 1.5px solid #ef4444; border-radius: 12px; background: rgba(239,68,68,0.16); display: flex; flex-direction: column; gap: 10px; }
+  .oc2-phnote .oc2-phtxt { font-weight: 800; font-size: 1rem; line-height: 1.45; color: #ff6b6b; }
+  .oc2-phnote .row-btn { align-self: flex-start; margin: 0; background: #dc2626 !important; border-color: #dc2626 !important; color: #fff !important; font-weight: 700; }
+  #custPopModal h2 { font-size: 1.3rem; line-height: 1.35; word-break: break-word; }
+  #custPopModal .pop-x { width: 42px; height: 42px; font-size: 1.25rem; }
+  #custPopBody { font-size: 1.08rem; line-height: 1.6; }
+  #custPopBody .oc-meta, #custPopBody .co-line { font-size: 1.08rem; line-height: 1.55; margin: 8px 0; word-break: break-word; }
+  #custPopBody .oc-meta a, #custPopBody .oc-ph { font-size: 1.08rem; }
+  #custPopBody .oc-money { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0; font-size: 1.1rem; }
+  #custPopBody .oc-money b { font-size: 1.2rem; }
+  #custPopBody .co-row { font-size: 1.08rem; gap: 10px; }
+  #custPopBody .co-row small, #custPopBody .ck-nm small { font-size: 0.95rem; }
+  #custPopBody .ck-h { font-size: 1.1rem; }
+  #custPopBody .cust-orders > summary { font-size: 1.1rem; padding: 12px 0; cursor: pointer; }
+  #custPopBody .oc-act { display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 16px; }
+  #custPopBody .oc-act .row-btn { flex: 1 1 auto; min-width: 0; margin: 0; min-height: 44px; padding: 6px 4px; font-size: 0.82rem; font-weight: 700; white-space: nowrap; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; box-sizing: border-box; }
+  #custPopBody .co-line .row-btn, #custPopBody .memo-chip { min-height: 42px; font-size: 1rem; }
   .crow-body { padding: 4px 12px 12px; border-top: 1px dashed var(--line); }
   .co-full { padding: 8px 0 10px; border-bottom: 1px solid var(--line); }
   .co-full .co-row { border-bottom: 0; padding-top: 0; }
@@ -655,18 +676,36 @@
   .due-stats .stat { padding: 12px 14px; box-shadow: none; background: var(--card-2); }
   .due-stats .stat .value { font-size: 1.3rem; }
   .due-stats .stat small { display: block; color: var(--muted); font-size: 0.78rem; margin-top: 2px; }
-  .due-group { font-size: 0.95rem; font-weight: 700; color: var(--due); margin: 16px 0 4px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .due-group { font-size: 0.95rem; font-weight: 700; color: var(--due); margin: 16px 0 4px; padding-bottom: 8px; border-bottom: 2px solid var(--due); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
   .due-group span { font-weight: 600; }
   .due-row { flex-wrap: wrap; }
-  .dr-btns { flex-wrap: wrap; }
+  .dr-btns { flex-wrap: nowrap; }
   .due-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
   .dr-main { min-width: 0; }
   .dr-name { font-weight: 700; word-break: break-word; }
+  .dr-sl { display: inline-flex; align-items: center; justify-content: center; min-width: 1.7em; height: 1.7em; padding: 0 0.4em; margin-right: 6px; border-radius: 50%; background: #f59e0b; color: #1a1a1a; border: 1px solid #fff3; box-shadow: 0 1px 3px rgba(0,0,0,0.3); font-size: 0.9em; font-weight: 900; line-height: 1; vertical-align: middle; }
   .dr-sub { font-size: 0.8rem; color: var(--muted); word-break: break-word; }
-  .dr-right { text-align: right; flex-shrink: 0; }
-  .dr-amt { font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; white-space: nowrap; }
-  .dr-btns { display: flex; gap: 6px; justify-content: flex-end; }
-  .dr-btns .row-btn { margin: 0; }
+  .dr-right { margin-left: auto; max-width: 100%; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; flex-wrap: nowrap; gap: 8px; text-align: right; }
+  .dr-amt { font-weight: 700; font-size: 1.05rem; margin-bottom: 0; white-space: nowrap; }
+  .dr-btns { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: stretch; gap: 5px; }
+  .dr-btns .row-btn[data-oact="pay"] { order: 1; }
+  .dr-btns .row-btn[data-oact="share"] { order: 2; }
+  .dr-btns .row-btn.wa { order: 3; }
+  .dr-btns .row-btn[data-oact="waive"] { order: 4; }
+  html:root .due-row .dr-btns .row-btn { margin: 0; display: inline-flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; box-sizing: border-box; min-height: 30px; padding: 4px 6px; font-size: 0.72rem; font-weight: 700; line-height: 1.1; text-decoration: none; }
+  html:root[data-view="mobile"] .due-row { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 2px; }
+  html:root[data-view="mobile"] .due-row .dr-main { width: 100%; }
+  html:root[data-view="mobile"] .due-row .dr-right { width: 100%; margin-left: 0; flex-direction: column; align-items: stretch; gap: 8px; }
+  html:root[data-view="mobile"] .due-row .dr-amt { align-self: flex-end; font-size: 1.15rem; }
+  html:root[data-view="mobile"] .due-row .dr-btns { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-columns: auto; gap: 5px; width: 100%; }
+  html:root[data-view="mobile"] .due-row .dr-btns .row-btn { min-height: 42px; padding: 4px 2px; font-size: 0.72rem; line-height: 1.15; white-space: normal; border-radius: 10px; }
+  @media (max-width: 600px) {
+    .due-row { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 2px; }
+    .due-row .dr-right { width: 100%; margin-left: 0; flex-direction: column; align-items: stretch; gap: 8px; }
+    .due-row .dr-amt { align-self: flex-end; font-size: 1.15rem; }
+    .due-row .dr-btns { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-columns: auto; gap: 5px; width: 100%; }
+    html:root .due-row .dr-btns .row-btn { min-height: 42px; padding: 4px 2px; font-size: 0.72rem; line-height: 1.15; white-space: normal; border-radius: 10px; }
+  }
 
   .ochips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .ochip { padding: 6px 12px; border-radius: 999px; border: 1.5px solid var(--border); background: var(--card-2); color: var(--text); font-family: inherit; font-size: 0.84rem; cursor: pointer; }
@@ -1079,10 +1118,13 @@
   .oc2-acts { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; }
   .oc2-contact, .oc2-main, .oc2-more { display: flex; flex-wrap: wrap; gap: 6px; }
   .oc2-contact .row-btn, .oc2-main .row-btn, .oc2-more .row-btn { text-decoration: none; display: inline-block; margin: 0; }
+.oc2-contact .row-btn { flex: 1 1 0; text-align: center; padding: 9px 8px; font-size: 0.88rem; }
   .oc2-main { margin-top: 8px; }
   .oc2-main .row-btn { flex: 1 1 0; text-align: center; padding: 9px 8px; font-size: 0.88rem; }
   .oc2-done { background: #fff; border: 2px solid #15803d !important; color: #15803d !important; }
   .oc2-morebtn { flex: 0 0 auto !important; }
+.oc2-main .row-btn[data-oact="share"], .dr-btns .row-btn[data-oact="share"] { background: linear-gradient(135deg, #1e3a8a, #2563eb) !important; border-color: #1e3a8a !important; color: #fff !important; font-weight: 700; box-shadow: 0 2px 6px rgba(30,58,138,.35); }
+.oc2-main .row-btn.oc2-morebtn { background: linear-gradient(135deg, #8a6212, #c9a227) !important; border-color: #8a6212 !important; color: #fff !important; font-weight: 700; box-shadow: 0 2px 6px rgba(138,98,18,.35); }
   .oc2-more { display: none; margin-top: 8px; padding: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
   .oc2-more.open { display: flex; }
   .oc2-grp { margin: 14px 2px 6px; font-weight: 800; font-size: 0.9rem; color: var(--heading); }
@@ -1286,6 +1328,40 @@
   #syncModal .stat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 1.5px solid var(--line); margin-bottom: 8px; flex: 0 0 auto; }
   #syncModal .stat-head h2 { margin: 0; }
   #syncModal .stat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+  /* ===== নিচের "বন্ধ করুন" বাটন সরানো — উপরের ✕ দিয়েই বন্ধ হবে ===== */
+  #photoClose, #bkClose, #lockClose, #binClose, #syncClose, #memoViewClose, #shareClose, #ordDetailClose { display: none !important; }
+  #photoModal .modal-actions, #lockModal .modal-actions, #memoModal .modal-actions, #ordDetailModal .modal-actions { display: none !important; }
+
+  /* ===== মোবাইল • লেনদেন ট্যাব: আয় ও ব্যয়ের তালিকা পাশাপাশি (side by side) ===== */
+  :root[data-view="mobile"] .lists { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px; align-items: start; margin-bottom: 0; }
+  :root[data-view="mobile"] .lists > .list-box { min-width: 0; padding: 8px 6px; border-radius: 12px; }
+  :root[data-view="mobile"] .lists .list-box h2 { font-size: 0.8rem; line-height: 1.3; margin-bottom: 7px; text-align: center; word-break: break-word; }
+  :root[data-view="mobile"] .lists .list-box tr { grid-template-columns: minmax(0, 1fr); grid-template-areas: "date" "desc" "amt" "act"; gap: 2px; padding: 6px 7px; margin-bottom: 6px; border-radius: 9px; }
+  :root[data-view="mobile"] .lists .list-box td { min-width: 0; }
+  :root[data-view="mobile"] .lists .list-box td:nth-child(1) { font-size: 0.66rem; }
+  :root[data-view="mobile"] .lists .list-box td:nth-child(2) { font-size: 0.8rem; line-height: 1.3; overflow-wrap: anywhere; }
+  :root[data-view="mobile"] .lists .list-box td:nth-child(2) .chip { font-size: 0.62rem; padding: 1px 6px; margin-top: 2px; display: inline-block; }
+  :root[data-view="mobile"] .lists .list-box td:nth-child(3) { font-size: 0.86rem; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  :root[data-view="mobile"] .lists .list-box td:nth-child(4) { text-align: left; display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+  :root[data-view="mobile"] .lists .list-box .row-btn { flex: 1 1 0; min-width: 0; margin: 0; padding: 4px 2px; font-size: 0.66rem; text-align: center; }
+  :root[data-view="mobile"] .lists .list-box td.empty { font-size: 0.74rem; padding: 6px 0; }
+  :root[data-view="mobile"] .lists .list-box .total-row { font-size: 0.78rem; text-align: center; overflow-wrap: anywhere; }
+
+  /* ===== তারিখ ও বার অনুযায়ী গ্রুপ ===== */
+  .list-box tr.dgrp td { background: rgba(214, 51, 132, 0.09); color: var(--muted); font-weight: 800; font-size: 0.85rem; padding: 7px 8px; border-bottom: 0; }
+  .list-box tr.dgrp .dgrp-t { float: right; font-weight: 700; }
+  :root[data-view="mobile"] .lists .list-box tr.dgrp { display: block; padding: 0; margin: 4px 0 5px; background: transparent; border: 0; }
+  :root[data-view="mobile"] .lists .list-box tr.dgrp td { display: block; border-radius: 8px; font-size: 0.7rem; padding: 5px 7px; line-height: 1.35; }
+  :root[data-view="mobile"] .lists .list-box tr.dgrp .dgrp-t { float: none; display: block; font-weight: 700; margin-top: 1px; }
+  :root[data-view="mobile"] .lists .list-box tr:not(.dgrp) td:nth-child(1) { display: none; }
+  :root[data-view="mobile"] .lists .list-box tr:not(.dgrp) { grid-template-areas: "desc" "amt" "act"; }
+
+  /* ===== প্রতি তারিখের আগে দাগ ===== */
+  .list-box tr.dgrp td { border-top: 2px solid var(--pink-dark); }
+  :root[data-view="mobile"] .lists .list-box tr.dgrp { margin: 10px 0 6px; padding-top: 6px; border: 0; border-top: 2px solid var(--pink-dark); border-radius: 0; }
+  :root[data-view="mobile"] .lists .list-box tr.dgrp td { border-top: 0; }
+  :root[data-view="mobile"] .lists .list-box tbody tr.dgrp:first-child { margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -1647,6 +1723,7 @@
 </div>
 <div class="modal" id="photoModal">
   <div class="modal-box" style="text-align:center;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;"><button type="button" class="pop-x" data-xfor="photoClose" aria-label="বন্ধ করুন">✕</button></div>
     <img id="photoBig" alt="" style="max-width:100%;max-height:70vh;border-radius:10px;">
     <div class="modal-actions"><button type="button" class="btn btn-cancel" id="photoClose">বন্ধ করুন</button></div>
   </div>
@@ -1687,7 +1764,7 @@
   <p class="hint" style="margin:10px 0 0;">নোট: Excel/CSV শুধু আয়-খরচের তালিকা, তাই এটা নামালে ব্যাকআপ রিমাইন্ডার রিসেট হয় না। রিমাইন্ডার রিসেট হয় শুধু JSON ব্যাকআপ নিলে।</p>
   <p class="hint" style="margin:10px 0 0;">টিপস: ফাইলটি Google Drive বা নিজের WhatsApp-এ পাঠিয়ে রাখলে ফোন হারালেও হিসাব ফেরত পাবেন।</p>
 </div></div></div>
-<div class="modal" id="lockModal"><div class="modal-box"><h2>🔒 অ্যাপ লক</h2><div id="lockBody"></div><div class="modal-actions"><button type="button" class="btn btn-cancel" id="lockClose">বন্ধ করুন</button></div></div></div>
+<div class="modal" id="lockModal"><div class="modal-box"><div class="stat-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;"><h2 style="margin:0;">🔒 অ্যাপ লক</h2><button type="button" class="pop-x" data-xfor="lockClose" aria-label="বন্ধ করুন">✕</button></div><div id="lockBody"></div><div class="modal-actions"><button type="button" class="btn btn-cancel" id="lockClose">বন্ধ করুন</button></div></div></div>
 <div class="modal" id="binModal"><div class="modal-box bin-box"><div class="stat-head"><h2>🗑 রিসাইকেল বিন</h2><button type="button" class="pop-x" id="binX" aria-label="বন্ধ করুন">✕</button></div><div class="stat-scroll"><p class="hint" style="margin-top:0">ডিলিট করা জিনিস ৩০ দিন এখানে থাকে, তারপর নিজে থেকে মুছে যায়।</p><div id="binBody"></div></div><div class="modal-actions" style="margin-top:12px;"><button type="button" class="btn btn-save-exp" id="binEmpty">বিন খালি করুন</button><button type="button" class="btn btn-cancel" id="binClose">বন্ধ করুন</button></div></div></div>
 <div class="modal" id="askModal">
   <div class="modal-box">
@@ -1791,8 +1868,8 @@
     <div id="statBody" class="stat-scroll"></div>
   </div>
 </div>
-<div class="modal" id="memoModal"><div class="modal-box"><h2 id="memoViewTitle">📎 ক্যাশ মেমো</h2><div id="memoViewBody"></div><div class="modal-actions"><button type="button" class="btn btn-cancel" id="memoViewClose">বন্ধ করুন</button></div></div></div>
-<div class="modal" id="shareModal"><div class="modal-box"><h2>📤 অর্ডারের বিবরণ</h2>
+<div class="modal" id="memoModal"><div class="modal-box"><div class="stat-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;"><h2 id="memoViewTitle" style="margin:0;">📎 ক্যাশ মেমো</h2><button type="button" class="pop-x" data-xfor="memoViewClose" aria-label="বন্ধ করুন">✕</button></div><div id="memoViewBody"></div><div class="modal-actions"><button type="button" class="btn btn-cancel" id="memoViewClose">বন্ধ করুন</button></div></div></div>
+<div class="modal" id="shareModal"><div class="modal-box"><div class="stat-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;"><h2 style="margin:0;">📤 অর্ডারের বিবরণ</h2><button type="button" class="pop-x" data-xfor="shareClose" aria-label="বন্ধ করুন">✕</button></div>
 <textarea id="shareBox" style="width:100%;min-height:230px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card-2);color:var(--text);font:inherit;line-height:1.6;resize:vertical;margin-bottom:12px;"></textarea>
 <div class="modal-actions"><button type="button" class="btn btn-primary" id="shareCopy">📋 টেক্সট কপি করুন</button><button type="button" class="btn btn-json" id="shareNative">📤 শেয়ার করুন</button><button type="button" class="btn btn-cancel" id="shareClose">বন্ধ করুন</button></div></div></div>
 <div class="toast" id="toast"></div>
@@ -2207,19 +2284,37 @@
   }
 
   /* ---------- Render ---------- */
-  function renderRows(type, bodyId) {
+  function renderRows(type, bodyId, allDates) {
     var rows = entries
       .filter(function (e) { return e.type === type && matches(e, true); })
       .sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id; });
     var body = $(bodyId);
-    if (!rows.length) {
+    if (!rows.length && !(allDates && allDates.length)) {
       body.innerHTML = '<tr><td colspan="4" class="empty">' +
         (filterActive() ? 'ফিল্টার অনুযায়ী কোনো এন্ট্রি মেলেনি' : 'এখনো কোনো এন্ট্রি নেই') + '</td></tr>';
       return 0;
     }
-    var total = 0, html = '';
+    var total = 0, html = '', lastDate = null;
+    var BN_DAYS = ['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
+    var BN_MONTHS = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+    var dayTotals = {};
+    if (allDates) {
+      var haveD = {};
+      rows.forEach(function (e) { haveD[e.date] = 1; });
+      allDates.forEach(function (d) { if (!haveD[d]) rows.push({ date: d, _none: true, id: 0, amount: 0 }); });
+      rows.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id; });
+    }
+    rows.forEach(function (e) { dayTotals[e.date] = (dayTotals[e.date] || 0) + e.amount; });
     rows.forEach(function (e) {
       total += e.amount;
+      if (e.date !== lastDate) {
+        lastDate = e.date;
+        var dp = String(e.date).split('-'), dt = new Date(+dp[0], +dp[1] - 1, +dp[2]);
+        var lbl = isNaN(dt.getTime()) ? escapeHtml(e.date)
+          : dp[2].replace(/^0/, '') + ' ' + BN_MONTHS[dt.getMonth()] + ' ' + dp[0] + ' · ' + BN_DAYS[dt.getDay()];
+        html += '<tr class="dgrp"><td colspan="4"><span class="dgrp-d">📅 ' + lbl + '</span><span class="dgrp-t">' + (e._none ? 'নাই' : fmt(dayTotals[e.date])) + '</span></td></tr>';
+      }
+      if (e._none) return;
       html += '<tr>' +
         '<td class="date">' + escapeHtml(e.date) + '</td>' +
         '<td><div class="desc">' + escapeHtml(e.desc) + '</div><span class="chip">' + escapeHtml(e.cat) + '</span>' + (e.orderId ? ' <span class="chip">📦 অর্ডার</span>' : '') + memoChip(e) + '</td>' +
@@ -2342,8 +2437,12 @@
     mini.textContent = netEl.textContent;
     mini.className = net >= 0 ? 'income-text' : 'expense-text';
 
-    var inc = renderRows('income', 'incomeBody');
-    var exp = renderRows('expense', 'expenseBody');
+    var allDates = [], seenD = {};
+    entries.forEach(function (e) {
+      if ((e.type === 'income' || e.type === 'expense') && matches(e, true) && !seenD[e.date]) { seenD[e.date] = 1; allDates.push(e.date); }
+    });
+    var inc = renderRows('income', 'incomeBody', allDates);
+    var exp = renderRows('expense', 'expenseBody', allDates);
     $('incomeTotalRow').textContent = inc ? 'মোট: ' + fmt(inc) : '';
     $('expenseTotalRow').textContent = exp ? 'মোট: ' + fmt(exp) : '';
     setCnt('cntAll', shown);
@@ -3505,14 +3604,14 @@
     var cls = (bal <= 0 || pct >= 100) ? 'full' : pct > 0 ? 'part' : 'none';
     return '<div class="oc2-pay ' + cls + '"><div class="oc2-pay-t"><span>💰 ' + fmt(v.paid) + ' / ' + fmt(o.total) + '</span><span>' + bnN(pct) + '%</span></div><div class="oc2-pay-bar"><i style="width:' + pct + '%"></i></div></div>';
   }
-  function orderCard(v, modal) {
+  function orderCard(v, modal, pos) {
     var o = v.o, bal = v.bal, st = statusInfo(o, bal), wa = waLink(v);
     var c = findCust(o.customer, o.phone), cs = c && ocStats[c.id], folded = !modal, more = !!ocMore[o.id];
     var pct = o.total > 0 ? Math.max(0, Math.min(100, Math.round(v.paid / o.total * 100))) : 0;
     var cpal = ocPal(o), pal = ocUrgPal(o, bal);
     var h = '<div class="ocard oc2 ' + st.cls + (folded ? ' folded' : '') + '" style="--pc:' + pal[0] + ';--pk-d:' + pal[1] + ';--pk-l:' + pal[2] + '">';
     /* হেডার: নাম + অবস্থা (চাপলে ভাঁজ/খোলা) */
-    h += '<div class="oc2-head' + (modal ? ' static' : '') + '"' + (modal ? '' : ' role="button" tabindex="0" data-fold="' + o.id + '" title="চাপলে পুরো বিবরণ খুলবে"') + '><div class="oc2-name"><i class="oc2-dot" style="background:rgb(' + cpal[0] + ')" title="ক্রেতার নিজস্ব রং"></i>' + ordNoBadge(o) + esc(o.customer) +
+    h += '<div class="oc2-head' + (modal ? ' static' : '') + '"' + (modal ? '' : ' role="button" tabindex="0" data-fold="' + o.id + '" title="চাপলে পুরো বিবরণ খুলবে"') + '><div class="oc2-name"><i class="oc2-dot" style="background:rgb(' + cpal[0] + ')" title="ক্রেতার নিজস্ব রং"></i>' + (pos ? '<span class="oc2-sl" style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;margin-right:6px;border-radius:50%;background:#f97316;color:#fff;font-weight:800;font-size:13px;">' + bnN(pos) + '</span>' : '') + ordNoBadge(o) + esc(o.customer) +
       (o.phone ? ' <span class="oc2-ph">📞 ' + esc(o.phone) + '</span>' : '') +
       (cs && cs.n >= 3 ? ' <span class="oc2-tag">⭐</span>' : '') + '</div>' + (modal ? '' : '<span class="oc2-chev">›</span>') + '</div>' +
       '<div class="oc2-badges">' + st.badge + ocCountdown(o) + '</div>' + ocPayBlock(o, v, bal, pct);
@@ -3545,20 +3644,21 @@
       if (o.waived > 0) h += '<span class="due-text">বকেয়া মুছেছি ' + fmt(o.waived) + '</span>';
     }
     h += '</div><div class="oc2-bar"><i style="width:' + pct + '%"></i></div><div class="oc2-pct">' + bnN(pct) + '% পরিশোধ</div></div>';
+    if (o.status !== 'cancelled' && !(o.cph && o.cph.length)) h += '<div class="oc2-phnote" role="alert"><div class="oc2-phtxt">⚠️ পেমেন্ট নেওয়ার আগে কেকের ছবি যুক্ত করুন</div><button type="button" class="row-btn" data-cact="addph" data-id="' + o.id + '">🎂 ছবি যুক্ত করুন</button></div>';
     h += '</div>'; /* body */
     /* বাটন: যোগাযোগ, মূল কাজ, আরও */
     h += '<div class="oc2-acts">';
-    h += '<div class="oc2-contact">' + (o.phone ? '<a class="row-btn" href="tel:' + esc(telNum(o.phone)) + '">📞 কল</a>' : '') +
-      (wa ? '<a class="row-btn wa" href="' + wa + '" target="_blank" rel="noopener">📲 WhatsApp</a>' : '') +
-      '<button type="button" class="row-btn" data-oact="msgr" data-id="' + o.id + '" style="background:#0a7cff;border-color:#0a7cff;color:#fff;">💬 Messenger</button></div>';
+    if (o.phone) h += '<div class="oc2-contact"><a class="row-btn" href="tel:' + esc(telNum(o.phone)) + '">📞 কল</a></div>';
     h += '<div class="oc2-main">';
     if (o.status !== 'cancelled' && bal > 0) h += '<button type="button" class="row-btn pay" data-oact="pay" data-id="' + o.id + '">💵 পেমেন্ট নিন</button>';
     if (o.status !== 'pending') h += '<button type="button" class="row-btn" data-oact="reopen" data-id="' + o.id + '">↩ চলমান করুন</button>';
+    h += '<button type="button" class="row-btn" data-oact="share" data-id="' + o.id + '">📤 শেয়ার</button>';
     h += '<button type="button" class="row-btn oc2-morebtn" data-more="' + o.id + '">' + (more ? '✕ বন্ধ' : '⋯ আরও') + '</button></div>';
     h += '<div class="oc2-more' + (more ? ' open' : '') + '">';
+    if (wa) h += '<a class="row-btn wa" href="' + wa + '" target="_blank" rel="noopener">📲 WhatsApp</a>';
+    h += '<button type="button" class="row-btn" data-oact="msgr" data-id="' + o.id + '" style="background:#0a7cff;border-color:#0a7cff;color:#fff;">💬 Messenger</button>';
     if (!o.cph || o.cph.length < 3) h += '<button type="button" class="row-btn" data-cact="addph" data-id="' + o.id + '">🎂 কেকের ছবি যুক্ত করুন' + (o.cph && o.cph.length ? ' (' + bnN(o.cph.length) + '/৩)' : '') + '</button>';
     if (o.waived > 0) h += '<button type="button" class="row-btn" data-oact="unwaive" data-id="' + o.id + '">↩ বকেয়া ফেরত আনুন</button>';
-    h += '<button type="button" class="row-btn" data-oact="share" data-id="' + o.id + '">📤 শেয়ার</button>';
     h += '<button type="button" class="row-btn edit" data-oact="edit" data-id="' + o.id + '">✏️ Edit</button>';
     h += '<button type="button" class="row-btn del" data-oact="del" data-id="' + o.id + '">🗑 Delete</button></div>';
     return h + '</div></div>';
@@ -3579,7 +3679,7 @@
   /* নামে চাপলে আলাদা পেজ (পপআপ) — লাভ/ক্ষতির বিস্তারিতের মতো */
   var ordDetailId = null, odm = document.createElement('div');
   odm.className = 'modal'; odm.id = 'ordDetailModal';
-  odm.innerHTML = '<div class="modal-box stat-box"><h2>📋 অর্ডারের বিবরণ</h2><div id="ordDetailBody"></div><div class="modal-actions" style="margin-top:12px;"><button type="button" class="btn btn-cancel" id="ordDetailClose">বন্ধ করুন</button></div></div>';
+  odm.innerHTML = '<div class="modal-box stat-box"><div class="stat-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;"><h2 style="margin:0;">📋 অর্ডারের বিবরণ</h2><button type="button" class="pop-x" id="ordDetailX" aria-label="বন্ধ করুন">✕</button></div><div id="ordDetailBody"></div><div class="modal-actions" style="margin-top:12px;"><button type="button" class="btn btn-cancel" id="ordDetailClose">বন্ধ করুন</button></div></div>';
   $('orderSec').appendChild(odm);
   function openOrdDetail(id) {
     var o = orders.filter(function (x) { return x.id === id; })[0]; if (!o) return;
@@ -3589,6 +3689,13 @@
   }
   function closeOrdDetail() { odm.className = 'modal'; ordDetailId = null; }
   $('ordDetailClose').addEventListener('click', closeOrdDetail);
+  $('ordDetailX').addEventListener('click', closeOrdDetail);
+  document.addEventListener('click', function (ev) {
+    var x = ev.target.closest && ev.target.closest('[data-xfor]');
+    if (!x) return;
+    var t = document.getElementById(x.getAttribute('data-xfor'));
+    if (t) t.click();
+  });
   odm.addEventListener('click', function (ev) { if (ev.target === odm) closeOrdDetail(); });
   odm.addEventListener('click', function (ev) { if (ev.target.closest('button[data-oact], button[data-cact], a.row-btn')) closeOrdDetail(); }, true);
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && ordDetailId !== null) closeOrdDetail(); });
@@ -3603,20 +3710,21 @@
     var o = v.o;
     return (o.customer + ' ' + o.phone + ' ' + o.item + ' ' + o.addr + ' ' + ordNo(o) + ' ' + (o.no || '')).toLowerCase().indexOf(dueQ) >= 0;
   }
-  function dueRow(v) {
+  function dueRow(v, idx) {
     var o = v.o, wa = waLink(v), sub, d = dayDiff(o.delivery);
     if (o.status === 'delivered') {
       sub = d < 0 ? 'ডেলিভারি হয়েছে ' + (-d) + ' দিন আগে' : 'ডেলিভারি হয়েছে';
     } else {
       sub = 'ডেলিভারি: ' + o.delivery + (d < 0 ? ' (' + (-d) + ' দিন দেরি)' : (d === 0 ? ' (আজ)' : ''));
     }
-    return '<div class="due-row"><div class="dr-main"><div class="dr-name">' + ordNoBadge(o) + esc(o.customer) +
+    return '<div class="due-row"><div class="dr-main"><div class="dr-name"><span class="dr-sl">' + (idx + 1) + '</span>' + ordNoBadge(o) + esc(o.customer) +
       (o.phone ? '<a class="oc-ph" href="tel:' + esc(telNum(o.phone)) + '">📞 ' + esc(o.phone) + '</a>' : '') + '</div>' +
       '<div class="dr-sub">' + esc(o.item) + '</div>' +
       '<div class="dr-sub">' + sub + ' · মোট ' + fmt(o.total) + ' · পেয়েছি ' + fmt(v.paid) + '</div></div>' +
       '<div class="dr-right"><div class="dr-amt due-text">' + fmt(v.bal) + '</div><div class="dr-btns">' +
       '<button type="button" class="row-btn pay" data-oact="pay" data-id="' + o.id + '">💵 পেমেন্ট নিন</button>' +
       (wa ? '<a class="row-btn wa" href="' + wa + '" target="_blank" rel="noopener">📲 WhatsApp</a>' : '') +
+      '<button type="button" class="row-btn" data-oact="share" data-id="' + o.id + '">📤 শেয়ার</button>' +
       '<button type="button" class="row-btn del" data-oact="waive" data-id="' + o.id + '">🗑 বকেয়া ডিলিট</button>' +
       '</div></div></div>';
   }
@@ -3669,10 +3777,10 @@
     });
     ocStats = custStats();
     var grouped = ordFilter === 'active' || ordFilter === 'today' || ordFilter === 'due', lastG = '';
-    $('ordList').innerHTML = list.length ? list.map(function (v) {
+    $('ordList').innerHTML = list.length ? list.map(function (v, i) {
       var g = grouped ? ordGroup(v.o) : '', hd = '';
       if (g && g !== lastG) { hd = '<div class="oc2-grp">' + g + '</div>'; lastG = g; }
-      return hd + orderCard(v);
+      return hd + orderCard(v, false, i + 1);
     }).join('') :
       '<div class="empty">' + (orders.length ? 'এই তালিকায় কোনো অর্ডার নেই' : 'এখনো কোনো অর্ডার নেই — “নতুন অর্ডার” ট্যাব থেকে প্রথম অর্ডারটি যোগ করুন') + '</div>';
 
@@ -4103,13 +4211,13 @@
     custMsg('');
   }
   var custOpen = {};
-  function custCard(x) {
+  function custCard(x, idx) {
     var c = x.c, wa = c.phone ? waNumber(c.phone) : '';
     var av = (c.photos && c.photos.length) ? '<img class="crow-av" src="' + esc(c.photos[0]) + '" alt="">' : '<span class="crow-av">' + esc(Array.from(c.name)[0] || '?') + '</span>';
     var h = '<details class="crow' + (x.bal > 0 ? ' late' : '') + '" data-cid="' + c.id + '"' + (custOpen[c.id] ? ' open' : '') + '>';
-    h += '<summary class="crow-sum">' + av + '<span class="crow-nm"><b>' + (x.n >= 3 ? '⭐ ' : '') + esc(c.name) + '</b>' + (c.phone ? ' <small>📞 ' + esc(c.phone) + '</small>' : '') + '</span>' +
+    h += '<summary class="crow-sum"><span class="dr-sl" style="flex:0 0 auto;margin-right:2px;">' + (idx + 1) + '</span>' + av + '<span class="crow-nm"><b>' + (x.n >= 3 ? '⭐ ' : '') + esc(c.name) + '</b>' + (c.phone ? ' <small>📞 ' + esc(c.phone) + '</small>' : '') + '</span>' +
       '<span class="crow-meta"><span class="badge b-soon">' + x.n + 'টি অর্ডার</span>' +
-      (x.bal > 0 ? '<b class="due-text">' + fmt(x.bal) + '</b>' : '<span class="income-text">✔</span>') + '<span class="crow-chev"></span></span></summary><div class="crow-body">';
+      (x.bal > 0 ? '<b class="due-text">' + fmt(x.bal) + '</b>' : '<span class="income-text">✔</span>') + '<button type="button" class="crow-pop" data-cpop="' + c.id + '" title="পপআপে খুলুন" aria-label="পপআপে খুলুন">⤢</button><span class="crow-chev"></span></span></summary><div class="crow-body">';
     if (c.phone) h += '<div class="oc-meta"><a class="oc-ph" href="tel:' + esc(telNum(c.phone)) + '" style="margin-left:0;">📞 ' + esc(c.phone) + '</a></div>';
     var ckOrders = x.list.filter(function (v) { return v.o.cph && v.o.cph.length; }).sort(function (a, b) { return a.o.delivery < b.o.delivery ? 1 : (a.o.delivery > b.o.delivery ? -1 : b.o.id - a.o.id); });
     var ckSet = {};
@@ -4268,6 +4376,32 @@
   $('custStats').addEventListener('click', function (e) { setCustFilter(e.target); });
   $('custStats').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCustFilter(e.target); } });
   $('custSort').addEventListener('change', function () { custSort = this.value; renderCustomers(); });
+  /* ক্রেতার পপআপ */
+  var cpm = document.createElement('div');
+  cpm.className = 'modal'; cpm.id = 'custPopModal';
+  cpm.innerHTML = '<div class="modal-box stat-box"><div class="stat-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;"><h2 style="margin:0;" id="custPopTitle">👤 ক্রেতার বিবরণ</h2><button type="button" class="pop-x" id="custPopX" aria-label="বন্ধ করুন">✕</button></div><div id="custPopBody"></div></div>';
+  document.body.appendChild(cpm);
+  function closeCustPop() { cpm.className = 'modal'; }
+  function openCustPop(id) {
+    var x = custStats()[id]; if (!x) return;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = custCard(x, 0);
+    var body = tmp.querySelector('.crow-body');
+    $('custPopTitle').textContent = '👤 ' + x.c.name;
+    $('custPopBody').innerHTML = body ? body.innerHTML : '';
+    cpm.className = 'modal show'; cpm.scrollTop = 0;
+  }
+  $('custPopX').addEventListener('click', closeCustPop);
+  cpm.addEventListener('click', function (ev) {
+    if (ev.target === cpm || ev.target.closest('button[data-cact], button[data-codel]')) closeCustPop();
+  });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && cpm.className.indexOf('show') >= 0) closeCustPop(); });
+  document.addEventListener('click', function (ev) {
+    var sm = ev.target.closest('summary.crow-sum'); if (!sm || ev.target.closest('a, button')) return;
+    var cr = sm.closest('.crow'); if (!cr) return;
+    ev.preventDefault(); ev.stopPropagation();
+    openCustPop(Number(cr.getAttribute('data-cid')));
+  }, true);
   document.addEventListener('click', function (ev) {
     var z = ev.target.closest('img[data-zoom]');
     if (z) { $('photoBig').src = z.getAttribute('src'); $('photoModal').className = 'modal show'; return; }
@@ -5452,7 +5586,7 @@
 
   /* ---------- Service Worker (অফলাইন + ইনস্টল) ---------- */
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+    window.addEventListener('load', function () {  });
   }
 
   /* ---------- ভাষা: বাংলা / English ---------- */
@@ -5768,6 +5902,11 @@
   window.__savReload = function () { load(); render(); };
   load(); render();
 })();
+</script>
+<script>
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
 </script>
 </body>
 </html>
