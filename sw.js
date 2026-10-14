@@ -1,55 +1,53 @@
-/* Safwan Treats – Service Worker (অফলাইনে চালানোর জন্য)
-   আপডেট দিলে নিচের VERSION বদলে দিন, তাহলে পুরনো ক্যাশ মুছে নতুন ফাইল আসবে। */
-var VERSION = 'v2';
-var CACHE = 'safwan-treats-' + VERSION;
-var FILES = [
-  './',
-  'index.html',
-  'manifest.webmanifest',
-  'apple-touch-icon.png',
-  'icon-192.png',
-  'icon-512.png',
-  'icon-maskable-512.png'
-];
+/* Safwan Treats – Service Worker (অফলাইন সাপোর্ট) */
+const CACHE = 'safwan-treats-v1';
+const CORE = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png'];
 
-self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));
-});
-
-self.addEventListener('activate', function (e) {
-  e.waitUntil(
-    caches.keys().then(function (keys) {
-      return Promise.all(keys.filter(function (k) { return k.indexOf('safwan-treats-') === 0 && k !== CACHE; })
-        .map(function (k) { return caches.delete(k); }));
-    }).then(function () { return self.clients.claim(); })
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE)
+      // কোনো ফাইল না থাকলেও install যেন ব্যর্থ না হয়
+      .then((cache) => Promise.all(CORE.map((url) => cache.add(url).catch(() => {}))))
+      .then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('fetch', function (e) {
-  var req = e.request;
-  if (req.method !== 'GET') return;
-  var url = new URL(req.url);
-  /* অন্য সাইটের রিকোয়েস্ট (যেমন Firebase সিঙ্ক) সরাসরি যাবে, ক্যাশ হবে না */
-  if (url.origin !== self.location.origin) return;
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
 
-  /* পেজ: আগে নেটওয়ার্ক, না পেলে ক্যাশ */
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return; // বাইরের রিকোয়েস্টে হাত দেবে না (যেমন সিঙ্ক)
+
+  // পেজ নেভিগেশন: আগে নেটওয়ার্ক, না পেলে ক্যাশ (যাতে আপডেট সহজে আসে)
   if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req).then(function (res) {
-        var copy = res.clone();
-        caches.open(CACHE).then(function (c) { c.put('index.html', copy); });
-        return res;
-      }).catch(function () { return caches.match('index.html'); })
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put('./index.html', copy));
+          return res;
+        })
+        .catch(() => caches.match('./index.html').then((r) => r || caches.match('./')))
     );
     return;
   }
 
-  /* বাকি ফাইল: আগে ক্যাশ, না পেলে নেটওয়ার্ক */
-  e.respondWith(
-    caches.match(req).then(function (hit) {
-      return hit || fetch(req).then(function (res) {
-        var copy = res.clone();
-        caches.open(CACHE).then(function (c) { c.put(req, copy); });
+  // অন্যান্য ফাইল: আগে ক্যাশ, পরে নেটওয়ার্ক
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((res) => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
         return res;
       });
     })
