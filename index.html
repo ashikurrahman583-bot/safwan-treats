@@ -585,6 +585,7 @@
 
   /* ===== মডাল ===== */
   .modal { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+#askModal { z-index: 300; }
   .modal.show { display: flex; }
   .modal-box { background: var(--card); color: var(--text); border: 1.5px solid var(--border); border-radius: 18px; padding: 20px; width: 100%; max-width: 440px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); }
   .modal-box h2 { font-size: 1.15rem; margin-bottom: 10px; color: var(--heading); }
@@ -1870,6 +1871,7 @@
     <div class="sync-warn">⚠️ যার কাছে URL ও কোড দুটোই থাকবে সে এই হিসাব দেখতে ও বদলাতে পারবে। কাউকে দেবেন না।</div>
     <div class="sync-msg" id="syncMsg"></div>
     <div class="modal-actions">
+      <button type="button" class="btn btn-save-exp" id="syncDemoOff" style="display:none;">🧹 ডেমো ডাটা আগে বন্ধ করুন</button>
       <button type="button" class="btn btn-primary" id="syncConnect">🔗 সংযুক্ত করে সিঙ্ক শুরু করুন</button>
       <button type="button" class="btn btn-export" id="syncNow">🔄 এখনই সিঙ্ক করুন</button>
       <button type="button" class="btn btn-import" id="syncOff">⏹ সিঙ্ক বন্ধ করুন</button>
@@ -2282,14 +2284,15 @@
   }
   function newId() { uid = Math.max(uid + 1, Date.now()); return uid; }
   /* ভবিষ্যতের তারিখ হলে নিশ্চিত করতে বলে (ভুল বছর টাইপ ধরার জন্য) */
-  function futureOk(d) {
+  function futureOk(d, retry) {
     if (!d || d <= today()) return true;
     var en = document.documentElement.getAttribute('lang') === 'en', p = d.split('-'), nice = p.length === 3 ? p[2] + '-' + p[1] + '-' + p[0] : d;
     var sameMonth = d.slice(0, 7) === today().slice(0, 7);
     var msg = en
       ? 'The date ' + nice + ' is in the future. ' + (sameMonth ? 'It will not be counted in “Today” totals until that day.' : 'It will not appear in “Today” or “This Month” totals until then.') + ' Save anyway?'
       : 'তারিখ ' + nice + ' ভবিষ্যতের। ' + (sameMonth ? 'সেই দিন না আসা পর্যন্ত এটি “আজ”-এর হিসাবে আসবে না।' : 'সেই সময় না আসা পর্যন্ত এটি “আজ” বা “এই মাস”-এর হিসাবে আসবে না।') + ' তবুও সংরক্ষণ করবেন?';
-    return confirm(msg);
+    if (!retry) return window.confirm(msg);
+    return askOnce('future:' + d, msg, retry, { title: en ? '📅 Future date' : '📅 ভবিষ্যতের তারিখ', yes: en ? 'Yes, save' : 'হ্যাঁ, সংরক্ষণ করুন', no: en ? 'Cancel' : 'বাতিল', cls: 'btn-save-inc' });
   }
   function isMobile() { return document.documentElement.getAttribute('data-view') === 'mobile'; }
 
@@ -2812,7 +2815,7 @@
 
     if (!desc) { showMsg(c.emptyDesc, type); return; }
     if (isNaN(amount) || amount <= 0) { showMsg('সঠিক টাকার পরিমাণ লিখুন (যেমন: ৫০০ বা 500)। দশমিকে কমা নয়, ডট (.) ব্যবহার করুন।', type); return; }
-    if (!futureOk(date)) return;
+    if (!futureOk(date, function () { saveEntry(type); })) return;
 
     var wasEditing = editing[type] !== null;
     var savedId = editing[type];
@@ -2854,15 +2857,16 @@
     });
     $(p + 'Cat').addEventListener('change', function () {
       if (this.value === '__new__') {
-        var n = prompt('নতুন ক্যাটাগরির নাম লিখুন:');
-        n = (n || '').trim().slice(0, 30);
-        if (n) {
-          if (catsFor(type).indexOf(n) < 0) { customCats[type].push(n); saveCats(); }
-          buildCatSelect(type, n);
-          refreshFilterCats();
-        } else {
-          buildCatSelect(type, lastCat[type]);
-        }
+        askText('➕ নতুন ক্যাটাগরি', 'নতুন ক্যাটাগরির নাম লিখুন:', 'যেমন: প্যাকেজিং', function (v) {
+          var n = (v || '').trim().slice(0, 30);
+          if (n) {
+            if (catsFor(type).indexOf(n) < 0) { customCats[type].push(n); saveCats(); }
+            buildCatSelect(type, n);
+            refreshFilterCats();
+          } else {
+            buildCatSelect(type, lastCat[type]);
+          }
+        }, 30);
       } else {
         lastCat[type] = this.value;
       }
@@ -3196,7 +3200,7 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
   $('exportBtn').addEventListener('click', function () {
-    if (!entries.length) { alert('এক্সপোর্ট করার মতো কোনো ডেটা নেই।'); return; }
+    if (!entries.length) { uiNote('এক্সপোর্ট করার মতো কোনো ডেটা নেই।'); return; }
     var sorted = entries.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id; });
     var lines = [['ধরন (Type)', 'তারিখ (Date)', 'বিবরণ (Description)', 'ক্যাটাগরি (Category)', 'টাকা (Amount)', 'মেমো ছবি (Memo photos)'].map(csvCell).join(',')];
     var inc = 0, exp = 0;
@@ -3211,7 +3215,7 @@
     download(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' }), 'Safwan-Treats-Backup-' + today() + '.csv');
   });
   $('jsonBtn').addEventListener('click', function () {
-    if (!entries.length && !orders.length && !loadSav().length && !trash.length) { alert('ব্যাকআপ করার মতো কোনো ডেটা নেই।'); return; }
+    if (!entries.length && !orders.length && !loadSav().length && !trash.length) { uiNote('ব্যাকআপ করার মতো কোনো ডেটা নেই।'); return; }
     var out = entries.map(function (e) { return Object.assign({}, e); });
     var outO = orders.map(function (o) { return Object.assign({}, o); });
     var chain = Promise.resolve();
@@ -3401,10 +3405,10 @@
         }
       } catch (e) { list = []; }
       input.value = '';
-      if (!list.length && !ords.length && !importSav.length && !importTrash.length) { alert('ফাইলে কোনো সঠিক এন্ট্রি পাওয়া যায়নি। ব্যাকআপ হিসেবে নামানো CSV বা JSON ফাইল বেছে নিন।'); return; }
+      if (!list.length && !ords.length && !importSav.length && !importTrash.length) { uiNote('ফাইলে কোনো সঠিক এন্ট্রি পাওয়া যায়নি। ব্যাকআপ হিসেবে নামানো CSV বা JSON ফাইল বেছে নিন।'); return; }
       openImportModal(list, cats, f.name, ords);
     };
-    reader.onerror = function () { input.value = ''; alert('ফাইলটি পড়া যায়নি।'); };
+    reader.onerror = function () { input.value = ''; uiNote('ফাইলটি পড়া যায়নি।'); };
     reader.readAsText(f, 'UTF-8');
   });
   $('impCancel').addEventListener('click', closeModal);
@@ -3438,7 +3442,7 @@
     var msgC = onlyEntries && orders.length
       ? 'এই ফাইলে শুধু আয়-ব্যয়ের এন্ট্রি আছে (অর্ডার নেই)। তাই বর্তমান ' + orders.length + 'টি অর্ডার, সেগুলোর পেমেন্ট এন্ট্রি, সঞ্চয় ও রিসাইকেল বিন অপরিবর্তিত থাকবে। বাকি সব এন্ট্রি মুছে ফাইলের ডেটা বসানো হবে। নিশ্চিত?'
       : 'বর্তমান সব এন্ট্রি মুছে ফাইলের ডেটা বসানো হবে। নিশ্চিত?';
-    if (!confirm(msgC)) return;
+    if (!askOnce('imp', msgC, function () { $('impReplace').click(); }, { title: '⚠️ এন্ট্রি বদলে যাবে', yes: 'হ্যাঁ, বসান', cls: 'btn-save-exp' })) return;
     var tnow = Date.now();
     var keepE = onlyEntries ? entries.filter(linked) : [];
     var keepIds = {};
@@ -4209,9 +4213,9 @@
     var amt = parseAmount($('payAmount').value);
     if (isNaN(amt) || amt <= 0) { $('payMsg').textContent = 'সঠিক টাকার পরিমাণ লিখুন। দশমিকে কমা নয়, ডট (.) ব্যবহার করুন।'; return; }
     var v = ordView(o, paidMap());
-    if (amt > v.bal + 0.001 && !confirm('এই পরিমাণ বাকির (' + fmt(Math.max(v.bal, 0)) + ') চেয়ে বেশি। তবুও সংরক্ষণ করবেন?')) return;
+    if (amt > v.bal + 0.001 && !askOnce('over:' + payFor + ':' + amt, 'এই পরিমাণ বাকির (' + fmt(Math.max(v.bal, 0)) + ') চেয়ে বেশি। তবুও সংরক্ষণ করবেন?', savePay, { title: '⚠️ বাকির চেয়ে বেশি', yes: 'হ্যাঁ, সংরক্ষণ করুন', cls: 'btn-save-inc' })) return;
     var payD = $('payDate').value || today();
-    if (!futureOk(payD)) return;
+    if (!futureOk(payD, savePay)) return;
     entries.push(payEntry(o, amt, payD));
     /* শুধু পুরো টাকা শোধ হলে অটো-ডেলিভারি; আংশিক পেমেন্টে স্ট্যাটাস অপরিবর্তিত */
     var nowDelivered = o.status === 'pending' && (v.bal - amt) <= 0.001;
@@ -4717,18 +4721,55 @@
     if (!$('ordAddr').value && c.addr) $('ordAddr').value = c.addr;
     if (!$('ordFb').value && c.fb) $('ordFb').value = c.fb;
   });
-  function askChoice(title, html, btns) {
+  var askOnDismiss = null;
+  function askChoice(title, html, btns, onDismiss) {
+    askOnDismiss = onDismiss || null;
     $('askTitle').textContent = title; $('askInfo').innerHTML = html;
     var box = $('askBtns'); box.innerHTML = '';
     btns.forEach(function (b) {
       var el = document.createElement('button');
       el.type = 'button'; el.className = 'btn ' + (b.cls || 'btn-cancel'); el.textContent = b.t;
-      el.addEventListener('click', function () { $('askModal').className = 'modal'; if (b.fn) b.fn(); });
+      el.addEventListener('click', function () { askOnDismiss = null; $('askModal').className = 'modal'; if (b.fn) b.fn(); });
       box.appendChild(el);
     });
     $('askModal').className = 'modal show';
   }
-  $('askModal').addEventListener('click', function (e) { if (e.target === this) this.className = 'modal'; });
+  $('askModal').addEventListener('click', function (e) {
+    if (e.target === this) { this.className = 'modal'; var f = askOnDismiss; askOnDismiss = null; if (f) f(); }
+  });
+  /* ---- পেজের ভেতরের কনফার্ম/বার্তা/ইনপুট (ব্রাউজারের পপআপ ব্লক হলেও কাজ করে) ----
+     askOnce: কনফার্ম দেখায়; “হ্যাঁ” চাপলে retry() আবার চলে এবং তখন এই কনফার্ম পাস হয়ে যায়।
+     একই কাজে একাধিক কনফার্ম থাকলে আগের “হ্যাঁ” মনে রাখা হয় (৬০ সেকেন্ড বা কাজ শেষ/বাতিল পর্যন্ত)। */
+  var acks = {}, askPend = false;
+  function askOnce(key, msg, retry, o) {
+    var t = acks[key];
+    if (t && Date.now() - t < 60000) return true;
+    o = o || {};
+    askPend = true;
+    var cancel = function () { acks = {}; askPend = false; };
+    askChoice(o.title || '❓ নিশ্চিত করুন', esc(msg), [
+      { t: o.yes || 'হ্যাঁ, এগিয়ে যান', cls: o.cls || 'btn-primary', fn: function () {
+        acks[key] = Date.now(); askPend = false;
+        try { retry(); } finally { if (!askPend) acks = {}; }
+      } },
+      { t: o.no || 'বাতিল', fn: cancel }
+    ], cancel);
+    return false;
+  }
+  function uiNote(msg) {
+    askChoice('ℹ️ জানানো হচ্ছে', esc(msg), [{ t: 'ঠিক আছে', cls: 'btn-primary' }]);
+  }
+  function askText(title, label, ph, cb, max) {
+    askChoice(title, '<label class="f" for="askTxt">' + esc(label) + '</label><input type="text" id="askTxt" maxlength="' + (max || 40) + '" placeholder="' + esc(ph || '') + '" style="width:100%;margin-top:6px;">', [
+      { t: 'যোগ করুন', cls: 'btn-primary', fn: function () { var v = $('askTxt').value; cb(v); } },
+      { t: 'বাতিল', fn: function () { cb(null); } }
+    ], function () { cb(null); });
+    setTimeout(function () {
+      var i = $('askTxt'); if (!i) return;
+      i.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); var b = $('askBtns').firstChild; if (b) b.click(); } });
+      i.focus();
+    }, 60);
+  }
   function deleteOrderById(id) {
     var o = orders.filter(function (x) { return x.id === id; })[0];
     if (!o) return;
@@ -5059,12 +5100,9 @@
   function savTrashSig() { return sigList(loadSav()) + '|' + sigTomb(tomb.s) + '|' + sigList(trash.map(trashWrap)) + '|' + sigTomb(tomb.t); }
   window.__cloudTouch = function () { scheduleSync(); };
   window.__cloudSavDel = function (id) { tomb.s = tomb.s || {}; tomb.s[id] = Date.now(); persistLocal(); };
-  /* ডেমো সঞ্চয় চেনা: নোট “(ডেমো)” দিয়ে শুরু, অথবা আইডি ডেমোর নির্দিষ্ট সীমার ভেতরে */
+  /* ডেমো সঞ্চয় চেনা: শুধু নোট “(ডেমো)” দিয়ে শুরু হলে (আইডির সীমা দিয়ে নয় — আসল সঞ্চয় ভুল করে ডেমো ধরা পড়ত) */
   function isDemoSav(x) {
-    if (!x) return false;
-    var id = Number(x.id);
-    return String(x.note || '').indexOf('(ডেমো)') === 0 ||
-      (id >= 1791000300000 && id < 1791000400000) || (id >= 1792000300000 && id < 1792000400000);
+    return !!x && String(x.note || '').indexOf('(ডেমো)') === 0;
   }
   /* ডেমো ডেটা শুধু এই ডিভাইসে থাকে — ক্লাউডে পাঠানো হয় না */
   function nonDemo() {
@@ -5078,22 +5116,117 @@
       trash: trash.filter(function (t) { return String(t.label || '').indexOf('ডেমো') < 0; })
     };
   }
+  /* ডেমো অর্ডারের আইডির তালিকা (ডেমোর ছবি/মেমো ক্লাউডে যাওয়া ঠেকাতে) */
+  function demoEidSet() {
+    var s = {}, oid = {};
+    orders.forEach(function (o) { if (String(o.customer).indexOf('(ডেমো) ') === 0) { oid[o.id] = 1; s[o.id] = 1; } });
+    entries.forEach(function (e) { if (String(e.desc).indexOf('[ডেমো] ') === 0 || (e.orderId && oid[e.orderId])) s[e.id] = 1; });
+    return s;
+  }
+  /* ডেমোর জন্য যোগ হওয়া ক্যাটাগরি ক্লাউডে যাবে না (আসল এন্ট্রিতে ব্যবহার হলে যাবে) */
+  function catsNoDemo() {
+    var nd = nonDemo(), out = {};
+    ['income', 'expense'].forEach(function (t) {
+      out[t] = toArr(customCats && customCats[t]).filter(function (c) {
+        return !(DEMO_CATS[t] && DEMO_CATS[t].indexOf(c) >= 0) || nd.entries.some(function (e) { return e.type === t && e.cat === c; });
+      });
+    });
+    return out;
+  }
+  /* ক্লাউডের ডেটা নেওয়ার আগে ডেমোর ছবি, কেকের হিসাব ও ক্যাটাগরি এই ডিভাইস থেকে সরানো */
+  function purgeDemoExtras() {
+    var dem = demoEidSet(), k;
+    for (k in dem) { try { memoWipe(Number(k)); } catch (e) {} }
+    try {
+      var ck = JSON.parse(localStorage.getItem('safwanTreatsCakeTotals_v1') || '[]');
+      if (Array.isArray(ck)) {
+        localStorage.setItem('safwanTreatsCakeTotals_v1', JSON.stringify(ck.filter(function (x) { return String(x.id || '').indexOf('ctdemo') !== 0 && String(x.name || '').indexOf('(ডেমো)') !== 0; })));
+        if (window.__cakeReload) window.__cakeReload();
+      }
+    } catch (e) {}
+    try {
+      ['income', 'expense'].forEach(function (t) {
+        customCats[t] = toArr(customCats[t]).filter(function (c) { return !(DEMO_CATS[t] && DEMO_CATS[t].indexOf(c) >= 0); });
+      });
+      saveCats();
+    } catch (e) {}
+  }
   function sigNoDemo() {
-    var nd = nonDemo();
-    return sigList(nd.entries) + '|' + sigList(nd.orders) + '|' + sigList(nd.customers) + '|' + sigTomb(tomb.e) + '|' + sigTomb(tomb.o) + '|' + sigTomb(tomb.c) + '|' + sigCats(customCats) + '|' + sigList(nd.savings) + '|' + sigTomb(tomb.s) + '|' + sigList(nd.trash.map(trashWrap)) + '|' + sigTomb(tomb.t);
+    var nd = nonDemo(), ct = cleanTomb();
+    return sigList(nd.entries) + '|' + sigList(nd.orders) + '|' + sigList(nd.customers) + '|' + sigTomb(ct.e) + '|' + sigTomb(ct.o) + '|' + sigTomb(ct.c) + '|' + sigCats(catsNoDemo()) + '|' + sigList(nd.savings) + '|' + sigTomb(ct.s) + '|' + sigList(nd.trash.map(trashWrap)) + '|' + sigTomb(ct.t);
+  }
+  /* ডেমো সিডের সব আইডি (ছবি ছাড়া, একবারই হিসাব) — ডেমোর ডিলিট-চিহ্ন ক্লাউডে না পাঠানোর জন্য */
+  var demoIdMap = null;
+  function demoIds() {
+    if (demoIdMap) return demoIdMap;
+    var m = {}, keep = window.__demoImgs, S = null;
+    try {
+      window.__demoImgs = function () { return { cakes: [], memos: [] }; };
+      S = window.__demoSeed(true);
+    } catch (e) { S = null; }
+    finally { window.__demoImgs = keep; }
+    if (S) ['c', 'o', 'e', 'sv'].forEach(function (k) { (S[k] || []).forEach(function (x) { if (x && x.id) m[x.id] = 1; }); });
+    demoIdMap = m;
+    return m;
+  }
+  function hasDemoRangeKey(t) {
+    for (var k in (t || {})) { var n = Number(k); if (n >= 1791000000000 && n <= 1793100000000) return true; }
+    return false;
   }
   function cleanTomb() {
-    var t = { e: tomb.e, o: tomb.o, c: tomb.c, s: {}, t: tomb.t };
-    for (var k in (tomb.s || {})) { if (!isDemoSav({ id: k })) t.s[k] = tomb.s[k]; }
-    return t;
+    var chk = hasDemoRangeKey(tomb.e) || hasDemoRangeKey(tomb.o) || hasDemoRangeKey(tomb.c) || hasDemoRangeKey(tomb.s);
+    var dem = chk ? demoIds() : null;
+    var f = function (m) { var o = {}; for (var k in (m || {})) { if (dem && dem[k]) continue; o[k] = m[k]; } return o; };
+    return { e: f(tomb.e), o: f(tomb.o), c: f(tomb.c), s: f(tomb.s), t: tomb.t };
   }
-  function buildPayload() { var nd = nonDemo(); return { v: 4, t: Date.now(), entries: nd.entries, orders: nd.orders, customers: nd.customers, cats: customCats, savings: nd.savings.length ? nd.savings : null, trash: nd.trash, del: cleanTomb() }; }
+  function buildPayload() { var nd = nonDemo(); return { v: 4, t: Date.now(), entries: nd.entries, orders: nd.orders, customers: nd.customers, cats: catsNoDemo(), savings: nd.savings.length ? nd.savings : null, trash: nd.trash, del: cleanTomb() }; }
 
   /* ---------- ক্যাশ মেমোর ছবি সিঙ্ক (Firebase: memos / memosDel) ---------- */
+  /* ছবি কোন কোন আইডির জন্য বৈধ: এন্ট্রি, অর্ডার ও রিসাইকেল বিনের আইটেম */
+  function memoValidSet() {
+    var v = {};
+    entries.forEach(function (e) { v[e.id] = 1; });
+    orders.forEach(function (o) { v[o.id] = 1; });
+    trash.forEach(function (t) {
+      if (!t) return;
+      if (t.data && t.data.id) v[t.data.id] = 1;
+      if (t.extra && t.extra.pays) t.extra.pays.forEach(function (p) { if (p && p.id) v[p.id] = 1; });
+    });
+    return v;
+  }
+  /* এতিম ছবি (যার এন্ট্রি/অর্ডার/বিন কোথাও নেই) ৭ দিনের পুরোনো হলে ডিভাইস থেকে মোছা।
+     নিরাপত্তা: এন্ট্রি-অর্ডার একেবারে খালি থাকলে, বা সব ছবিই এতিম মনে হলে কিছুই মোছা হয় না। */
+  function memoPruneOrphans() {
+    if (!entries.length && !orders.length) return Promise.resolve(0);
+    var v = memoValidSet(), now = Date.now(), cand = [], total = 0;
+    return memoOpen().then(function (db) {
+      return new Promise(function (res) {
+        var c = db.transaction('memos', 'readonly').objectStore('memos').index('eid').openKeyCursor();
+        c.onsuccess = function () {
+          var cur = c.result;
+          if (cur) { total++; if (!v[cur.key]) cand.push(cur.primaryKey); cur.continue(); } else res();
+        };
+        c.onerror = function () { res(); };
+      });
+    }).then(function () {
+      if (!cand.length || cand.length >= total) return 0;
+      var del = [], chain = Promise.resolve();
+      cand.forEach(function (k) {
+        chain = chain.then(function () { return memoReq('readonly', function (os) { return os.get(k); }); })
+          .then(function (r) { if (r && r.t > 0 && now - r.t > 7 * 864e5) del.push(k); });
+      });
+      return chain.then(function () {
+        if (!del.length) return 0;
+        return memoReq('readwrite', function (os) { var r; del.forEach(function (k) { r = os.delete(k); }); return r; })
+          .then(function () { return del.length; });
+      });
+    }).then(function (n) { if (n) memoInit(); return n; }).catch(function () { return 0; });
+  }
+  setTimeout(function () { memoPruneOrphans(); }, 8000);
   function memoSync() {
     if (!syncCfg.on) return Promise.resolve();
     var base = endpoint(syncCfg).replace(/\.json$/, '');
-    var q = memoDelQ(), changed = false;
+    var q = memoDelQ(), changed = false, dem = demoEidSet(), hasDem = Object.keys(dem).length > 0, valid = memoValidSet();
     var J = function (u, m, b) { var o = { method: m, cache: 'no-store' }; if (b !== undefined) o.body = JSON.stringify(b); return fetchJson(u, o); };
     var p = Promise.resolve();
     q.forEach(function (m) {
@@ -5116,7 +5249,11 @@
             if (rt[m]) { chain = chain.then(function () { changed = true; return memoReq('readwrite', function (os) { return os.delete(loc[m]); }); }); }
             else if (!rm[m]) {
               chain = chain.then(function () { return memoReq('readonly', function (os) { return os.get(loc[m]); }); })
-                .then(function (r) { if (r) return J(base + '/memos/' + m + '.json', 'PUT', { eid: r.eid, data: r.data, t: r.t || 0 }); });
+                .then(function (r) { if (r && !dem[r.eid] && valid[r.eid]) return J(base + '/memos/' + m + '.json', 'PUT', { eid: r.eid, data: r.data, t: r.t || 0 }); });
+            } else if (hasDem) {
+              /* আগে ভুলে ক্লাউডে চলে যাওয়া ডেমো ছবি ক্লাউড থেকে মুছে ফেলা */
+              chain = chain.then(function () { return memoReq('readonly', function (os) { return os.get(loc[m]); }); })
+                .then(function (r) { if (r && dem[r.eid]) return J(base + '/memos/' + m + '.json', 'DELETE'); });
             }
           });
           Object.keys(rm).forEach(function (m) {
@@ -5129,7 +5266,7 @@
           });
           return chain;
         });
-      }).then(function () { if (changed) memoInit(); });
+      }).then(function () { if (changed) memoInit(); return memoPruneOrphans(); });
   }
   /* ---------- কেকের মোট খরচ সিঙ্ক (Firebase: cakes / cakesDel) ---------- */
   function cakeSync() {
@@ -5253,6 +5390,26 @@
   function prepForMode(mode, r) {
     var now = Date.now(), i;
     if (mode === 'cloud') {
+      try { purgeDemoExtras(); } catch (e) {}
+      /* যেসব এন্ট্রি/অর্ডার বাদ পড়বে সেগুলোর ছবি ডিভাইস থেকে মুছে দেওয়া (নইলে এতিম হয়ে ক্লাউডে উঠত) */
+      try {
+        var rkeep = {}, rgone = {};
+        (r.entries || []).forEach(function (e) { rkeep[e.id] = 1; });
+        (r.orders || []).forEach(function (o) { rkeep[o.id] = 1; });
+        (r.trash || []).forEach(function (t) {
+          if (!t) return;
+          if (t.data) rkeep[t.data.id] = 1;
+          if (t.extra && t.extra.pays) t.extra.pays.forEach(function (p) { rkeep[p.id] = 1; });
+        });
+        entries.forEach(function (e) { if (!rkeep[e.id]) rgone[e.id] = 1; });
+        orders.forEach(function (o) { if (!rkeep[o.id]) rgone[o.id] = 1; });
+        trash.forEach(function (t) {
+          if (!t) return;
+          if (t.data && !rkeep[t.data.id]) rgone[t.data.id] = 1;
+          if (t.extra && t.extra.pays) t.extra.pays.forEach(function (p) { if (!rkeep[p.id]) rgone[p.id] = 1; });
+        });
+        Object.keys(rgone).forEach(function (k) { memoWipe(Number(k)); });
+      } catch (e) {}
       entries = []; orders = []; customers = []; tomb = { e: {}, o: {}, c: {}, s: {}, t: {} };
       saveSav([]); trash = []; saveTrash(true); updBinCnt();
       return r;
@@ -5322,13 +5479,16 @@
     var el = $('syncStatus');
     if (!el) return;
     var s = syncState.status, cls = 'sync-status', txt;
-    if (!syncCfg.on) txt = '⚪ ক্লাউড সিঙ্ক বন্ধ আছে।';
+    if (!syncCfg.on) txt = '⚪ ক্লাউড সিঙ্ক বন্ধ আছে।' + (demoOn() ? '<br>🧪 ডেমো ডেটা চালু আছে — সিঙ্ক শুরুর আগে নিচের বাটনে ডেমো ডেটা বন্ধ করে নিন।' : '');
     else if (s === 'busy') txt = '🔄 সিঙ্ক হচ্ছে…';
     else if (s === 'err') { cls += ' err'; txt = '⚠️ ' + esc(syncState.msg) + (syncCfg.last ? '<br>' + lastText() : ''); }
     else if (demoOn()) { txt = '🧪 ডেমো ডেটা চালু আছে — ডেমো ডেটা ক্লাউডে যায় না, শুধু এই ডিভাইসে দেখা যাচ্ছে।<br>ডেমো মুছে ফেললে সিঙ্ক আবার স্বাভাবিক দেখাবে।' + (syncCfg.last ? '<br>' + lastText() : ''); }
     else { cls += ' ok'; txt = '✅ সিঙ্ক চালু আছে — প্রতিটি পরিবর্তন নিজে থেকেই ক্লাউডে যাবে।<br>' + lastText(); }
     el.className = cls;
     el.innerHTML = txt;
+    /* ডেমো চালু + ক্লাউড সিঙ্ক বন্ধ থাকলেই কেবল “ডেমো ডাটা আগে বন্ধ করুন” বাটন দেখাবে */
+    var dBtn = $('syncDemoOff');
+    if (dBtn) dBtn.style.display = (!syncCfg.on && demoOn()) ? '' : 'none';
     $('syncOff').style.display = syncCfg.on ? '' : 'none';
     $('syncNow').style.display = syncCfg.on ? '' : 'none';
     $('syncConnect').textContent = syncCfg.on ? '🔗 নতুন সেটিং দিয়ে আবার সংযুক্ত করুন' : '🔗 সংযুক্ত করে সিঙ্ক শুরু করুন';
@@ -5400,11 +5560,20 @@
     syncMsg('সংযোগ করা হচ্ছে…', true);
     cloudGet({ url: url, code: code }).then(function (remote) {
       var hasRemote = remote && (toArr(remote.entries).length || toArr(remote.orders).length);
-      var hasLocal = entries.length || orders.length;
+      var nd = nonDemo();
+      var hasLocal = nd.entries.length || nd.orders.length;
+      var realLocal = hasLocal || nd.customers.length || nd.savings.length || nd.trash.length;
+      if (hasRemote && !realLocal && (entries.length || orders.length || customers.length)) {
+        /* এই ডিভাইসে শুধু ডেমো ডেটা — ডেমো সরিয়ে সরাসরি ক্লাউডের আসল ডেটা বসবে */
+        syncCfg.url = url; syncCfg.code = code; syncCfg.on = true; saveSyncCfg();
+        syncMsg('');
+        closeM('syncModal');
+        return runSync(true, { remote: remote, mode: 'cloud' });
+      }
       if (hasRemote && hasLocal) {
         pendingChoice = { remote: remote, url: url, code: code };
         syncMsg('');
-        $('choiceInfo').innerHTML = 'ক্লাউডে আগে থেকেই ডেটা আছে (' + toArr(remote.entries).length + 'টি এন্ট্রি, ' + toArr(remote.orders).length + 'টি অর্ডার), আবার এই ডিভাইসেও ডেটা আছে (' + entries.length + 'টি এন্ট্রি, ' + orders.length + 'টি অর্ডার)। কীভাবে মেলাতে চান?';
+        $('choiceInfo').innerHTML = 'ক্লাউডে আগে থেকেই ডেটা আছে (' + toArr(remote.entries).length + 'টি এন্ট্রি, ' + toArr(remote.orders).length + 'টি অর্ডার), আবার এই ডিভাইসেও ডেটা আছে (' + nd.entries.length + 'টি এন্ট্রি, ' + nd.orders.length + 'টি অর্ডার)। কীভাবে মেলাতে চান?';
         closeM('syncModal');
         openM('choiceModal');
         return;
@@ -5417,8 +5586,8 @@
   }
   function choose(mode) {
     if (!pendingChoice) return;
-    if (mode === 'cloud' && !confirm('এই ডিভাইসের বর্তমান সব ডেটা মুছে ক্লাউডের ডেটা বসবে। নিশ্চিত?')) return;
-    if (mode === 'local' && !confirm('ক্লাউডের বর্তমান ডেটা এই ডিভাইসের ডেটা দিয়ে বদলে যাবে (অন্য ডিভাইসেও)। নিশ্চিত?')) return;
+    if (mode === 'cloud' && !askOnce('choose:cloud', 'এই ডিভাইসের বর্তমান সব ডেটা মুছে ক্লাউডের ডেটা বসবে। নিশ্চিত?', function () { choose('cloud'); }, { title: '☁️ ক্লাউডের ডেটা নেবেন?', yes: 'হ্যাঁ, ক্লাউডের ডেটা নিন', cls: 'btn-save-exp' })) return;
+    if (mode === 'local' && !askOnce('choose:local', 'ক্লাউডের বর্তমান ডেটা এই ডিভাইসের ডেটা দিয়ে বদলে যাবে (অন্য ডিভাইসেও)। নিশ্চিত?', function () { choose('local'); }, { title: '📱 এই ডিভাইসের ডেটা পাঠাবেন?', yes: 'হ্যাঁ, এই ডিভাইসের ডেটা পাঠান', cls: 'btn-save-exp' })) return;
     var pc = pendingChoice; pendingChoice = null;
     syncCfg.url = pc.url; syncCfg.code = pc.code; syncCfg.on = true; saveSyncCfg();
     closeM('choiceModal');
@@ -5432,8 +5601,14 @@
   $('syncModal').addEventListener('click', function (e) { if (e.target === this) closeM('syncModal'); });
   $('syncConnect').addEventListener('click', connectCloud);
   $('syncNow').addEventListener('click', function () { runSync(true); });
+  $('syncDemoOff').addEventListener('click', function () {
+    if (syncCfg.on || !demoOn()) { paintSyncModal(); return; }
+    if (!askOnce('demoOff', 'শুধু “ডেমো” লেখা নমুনা ডেটা মুছবে। আপনার আসল ডেটা থাকবে। ডেমো ডেটা বন্ধ করবেন?', function () { $('syncDemoOff').click(); }, { title: '🧹 ডেমো ডেটা মুছবেন?', yes: 'হ্যাঁ, ডেমো মুছুন', cls: 'btn-save-exp' })) return;
+    clearDemo();
+    paintSyncModal();
+  });
   $('syncOff').addEventListener('click', function () {
-    if (!confirm('সিঙ্ক বন্ধ করবেন? ক্লাউডের ডেটা মুছবে না, শুধু এই ডিভাইস আর সিঙ্ক করবে না।')) return;
+    if (!askOnce('syncOff', 'সিঙ্ক বন্ধ করবেন? ক্লাউডের ডেটা মুছবে না, শুধু এই ডিভাইস আর সিঙ্ক করবে না।', function () { $('syncOff').click(); }, { title: '⏹ সিঙ্ক বন্ধ করবেন?', yes: 'হ্যাঁ, বন্ধ করুন', cls: 'btn-save-exp' })) return;
     syncCfg.on = false; saveSyncCfg();
     clearTimeout(syncTimer);
     setStatus('off');
