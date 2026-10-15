@@ -1728,7 +1728,7 @@
       <button type="button" class="btn btn-import" id="importBtn">📤 ব্যাকআপ ফেরত আনুন</button>
       <button type="button" class="btn btn-primary" id="cloudBtn2">☁️ ক্লাউড সিঙ্ক সেটিং</button>
     </div>
-    <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" style="display:none;">
+    <input type="file" id="importFile" accept=".csv,.json,.txt,text/csv,application/json,text/plain" style="display:none;">
     <p class="hint">ব্যাকআপ ফাইল (CSV বা JSON) বেছে নিলে আগের সব এন্ট্রি ফেরত আনা যাবে। ব্রাউজার ক্লিয়ার করার আগে বা ফোন বদলানোর আগে ব্যাকআপ নামিয়ে রাখুন। JSON ব্যাকআপে অর্ডার, সঞ্চয় ও রিসাইকেল বিনও থাকে। অথবা “ক্লাউড সিঙ্ক” চালু করলে ফোন ও কম্পিউটারে একই হিসাব নিজে থেকেই মিলে থাকবে।</p>
   </section>
 
@@ -2248,6 +2248,8 @@
   var customers = [];
   var importCust = [];
   var importSav = [], importTrash = [];
+  var importSettings = null; /* ফাইলের থিম/ভাষা/ভিউ সেটিংস (না থাকলে null) */
+  var importCake = null, importCakeReplace = false; /* null = ফাইলে কেকের হিসাবের অংশ নেই */
   var tomb = { e: {}, o: {}, c: {}, s: {}, t: {} };
   var editingOrder = null;
 
@@ -3178,30 +3180,43 @@
   /* ---------- Export ---------- */
   function csvCell(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }
   function download(blob, name) {
+    var saveFile = function () {
+      if (/^Safwan-Treats-Backup.*\.json$/.test(name) && window.markBackup) window.markBackup();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    };
     if (window.__bkShare && /\.json$/.test(name)) {
       window.__bkShare = false;
       try {
-        var sf = new File([blob], name, { type: 'application/json' });
-        if (navigator.canShare && navigator.canShare({ files: [sf] })) {
-          navigator.share({ files: [sf], title: 'Safwan Treats ব্যাকআপ' }).then(function () { if (window.markBackup) window.markBackup(); }, function () {});
-          return;
+        /* Chrome (অ্যান্ড্রয়েড) .json ফাইল শেয়ার করতে দেয় না, কিন্তু টেক্সট ফাইল দেয় — তাই না পারলে .json.txt নামে (একই ডেটা) শেয়ার করা হয়; ফেরত আনার সময় দুটোই চলে */
+        var cands = [new File([blob], name, { type: 'application/json' }), new File([blob], name + '.txt', { type: 'text/plain' })];
+        for (var ci = 0; ci < cands.length; ci++) {
+          if (navigator.canShare && navigator.canShare({ files: [cands[ci]] })) {
+            navigator.share({ files: [cands[ci]], title: 'Safwan Treats ব্যাকআপ' }).then(function () {
+              if (window.markBackup) window.markBackup();
+            }, function (err) {
+              if (err && err.name === 'AbortError') return; /* নিজে বাতিল করেছেন */
+              toast('⚠️ শেয়ার করা গেল না — ফাইল নামানো হচ্ছে');
+              saveFile();
+            });
+            return;
+          }
         }
       } catch (e) {}
       toast('এই ব্রাউজারে সরাসরি শেয়ার চলে না — ফাইল নামানো হচ্ছে');
     }
-    if (/^Safwan-Treats-Backup.*\.json$/.test(name) && window.markBackup) window.markBackup();
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    saveFile();
   }
   $('exportBtn').addEventListener('click', function () {
-    if (!entries.length) { uiNote('এক্সপোর্ট করার মতো কোনো ডেটা নেই।'); return; }
-    var sorted = entries.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id; });
+    var ndE = nonDemo().entries; /* ডেমো এন্ট্রি ব্যাকআপে যাবে না */
+    if (!ndE.length) { uiNote('এক্সপোর্ট করার মতো কোনো ডেটা নেই।'); return; }
+    var sorted = ndE.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id; });
     var lines = [['ধরন (Type)', 'তারিখ (Date)', 'বিবরণ (Description)', 'ক্যাটাগরি (Category)', 'টাকা (Amount)', 'মেমো ছবি (Memo photos)'].map(csvCell).join(',')];
     var inc = 0, exp = 0;
     sorted.forEach(function (e) {
@@ -3214,24 +3229,30 @@
     lines.push(['', '', 'নিট লাভ/ক্ষতি (Net Profit/Loss)', '', inc - exp].map(csvCell).join(','));
     download(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' }), 'Safwan-Treats-Backup-' + today() + '.csv');
   });
+  /* কেকের মোট খরচের ডেমো হিসাব ব্যাকআপে যাবে না */
+  function isDemoCake(x) { return !!x && (String(x.id || '').indexOf('ctdemo') === 0 || String(x.name || '').indexOf('(ডেমো)') === 0); }
+  function cakeBackupList() {
+    try { return (window.__cakeGet ? window.__cakeGet() : []).filter(function (x) { return x && !isDemoCake(x); }); } catch (e) { return []; }
+  }
   $('jsonBtn').addEventListener('click', function () {
-    if (!entries.length && !orders.length && !loadSav().length && !trash.length) { uiNote('ব্যাকআপ করার মতো কোনো ডেটা নেই।'); return; }
-    var out = entries.map(function (e) { return Object.assign({}, e); });
-    var outO = orders.map(function (o) { return Object.assign({}, o); });
+    var nd = nonDemo(), ckList = cakeBackupList(); /* ডেমো ডেটা ব্যাকআপে যাবে না */
+    if (!nd.entries.length && !nd.orders.length && !nd.savings.length && !nd.trash.length && !nd.customers.length && !ckList.length) { uiNote('ব্যাকআপ করার মতো কোনো ডেটা নেই।'); return; }
+    var out = nd.entries.map(function (e) { return Object.assign({}, e); });
+    var outO = nd.orders.map(function (o) { return Object.assign({}, o); });
     var chain = Promise.resolve();
-    entries.filter(function (e) { return memoIds[e.id]; }).forEach(function (e) {
+    nd.entries.filter(function (e) { return memoIds[e.id]; }).forEach(function (e) {
       chain = chain.then(function () { return memoGetEid(e.id); }).then(function (l) {
         var o = out.filter(function (x) { return x.id === e.id; })[0];
         if (o && l.length) o.memos = l.map(function (m) { return m.data; });
       });
     });
-    orders.filter(function (o) { return memoIds[o.id]; }).forEach(function (o) {
+    nd.orders.filter(function (o) { return memoIds[o.id]; }).forEach(function (o) {
       chain = chain.then(function () { return memoGetEid(o.id); }).then(function (l) {
         var x = outO.filter(function (q) { return q.id === o.id; })[0];
         if (x && l.length) x.memos = l.map(function (m) { return m.data; });
       });
     });
-    var outT = trash.map(function (t) { return Object.assign({}, t); });
+    var outT = nd.trash.map(function (t) { return Object.assign({}, t); });
     outT.forEach(function (t) {
       if (t.kind === 'customer' || !t.data) return;
       chain = chain.then(function () { return memoGetEid(t.data.id); }).then(function (l) {
@@ -3239,7 +3260,9 @@
       }).catch(function () {});
     });
     chain.catch(function () { toast('⚠️ কিছু মেমোর ছবি ব্যাকআপে যায়নি'); }).then(function () {
-      var payload = { app: 'Safwan Treats', version: 5, exportedAt: new Date().toISOString(), categories: customCats, entries: out, orders: outO, customers: customers, savings: loadSav(), trash: outT };
+      var root = document.documentElement;
+      var payload = { app: 'Safwan Treats', version: 7, exportedAt: new Date().toISOString(), categories: catsNoDemo(), entries: out, orders: outO, customers: nd.customers, savings: nd.savings, trash: outT, cakeTotals: ckList,
+        settings: { theme: root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light', lang: root.getAttribute('lang') === 'en' ? 'en' : 'bn', view: root.getAttribute('data-view') === 'mobile' ? 'mobile' : 'pc' } };
       download(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'Safwan-Treats-Backup-' + today() + '.json');
     });
   });
@@ -3316,6 +3339,8 @@
     importCust = (p && Array.isArray(p.customers) ? p.customers : []).map(normalizeCustomer).filter(Boolean);
     importSav = (p && Array.isArray(p.savings) ? p.savings : []).map(normSav).filter(Boolean);
     importTrash = (p && Array.isArray(p.trash) ? p.trash : []).map(function (x) { var n = normTrash(x); if (n && x && Array.isArray(x.memos)) n._memos = x.memos; return n; }).filter(Boolean);
+    importCake = (p && !Array.isArray(p) && Array.isArray(p.cakeTotals)) ? p.cakeTotals : null;
+    importSettings = (p && !Array.isArray(p) && p.settings && typeof p.settings === 'object') ? p.settings : null;
     return { list: list, cats: cats, orders: ords };
   }
   function key(e) { return [e.type, e.date, e.desc, e.cat, e.amount].join('|'); }
@@ -3325,7 +3350,7 @@
     var ni = 0, ne = 0;
     list.forEach(function (e) { if (e.type === 'income') ni++; else ne++; });
     $('impInfo').innerHTML = '<b>' + escapeHtml(fileName) + '</b> ফাইলে <b>' + list.length + '</b> টি এন্ট্রি পাওয়া গেছে (আয় ' + ni +
-      ', খরচ ' + ne + ')' + (pending.orders.length ? ' এবং <b>' + pending.orders.length + '</b> টি অর্ডার' : '') + (importSav.length ? ' এবং <b>' + importSav.length + '</b> টি সঞ্চয়' : '') + (importTrash.length ? ' এবং রিসাইকেল বিনে <b>' + importTrash.length + '</b> টি আইটেম' : '') + '।<br>বর্তমানে ব্রাউজারে আছে <b>' + entries.length + '</b> টি এন্ট্রি।';
+      ', খরচ ' + ne + ')' + (pending.orders.length ? ' এবং <b>' + pending.orders.length + '</b> টি অর্ডার' : '') + (importSav.length ? ' এবং <b>' + importSav.length + '</b> টি সঞ্চয়' : '') + (importTrash.length ? ' এবং রিসাইকেল বিনে <b>' + importTrash.length + '</b> টি আইটেম' : '') + (importCake && importCake.length ? ' এবং <b>' + importCake.length + '</b> টি কেকের মোট খরচের হিসাব' : '') + (importSettings ? ' এবং থিম/ভাষা/ভিউ সেটিংস' : '') + '।<br>বর্তমানে ব্রাউজারে আছে <b>' + entries.length + '</b> টি এন্ট্রি।';
     $('importModal').className = 'modal show';
   }
   function closeModal() { $('importModal').className = 'modal'; pending = null; }
@@ -3339,6 +3364,24 @@
       }
     });
     saveCats();
+  }
+  /* ব্যাকআপের থিম/ভাষা/ভিউ সেটিংস প্রয়োগ — শুধু বৈধ মান নেওয়া হয়, যেগুলো সত্যিই বদলেছে সেগুলোর নাম ফেরত দেয় */
+  function applyImportedSettings(st) {
+    var did = [], root = document.documentElement;
+    if (!st || typeof st !== 'object') return did;
+    if (st.theme === 'dark' || st.theme === 'light') {
+      if (root.getAttribute('data-theme') !== st.theme) { applyTheme(st.theme); did.push('থিম'); }
+      lsSet('safwanTreatsTheme', st.theme);
+    }
+    if (st.view === 'mobile' || st.view === 'pc') {
+      if (root.getAttribute('data-view') !== st.view) { applyView(st.view); did.push('ভিউ'); }
+      lsSet('safwanTreatsView', st.view);
+    }
+    if (st.lang === 'en' || st.lang === 'bn') {
+      if ((root.getAttribute('lang') === 'en' ? 'en' : 'bn') !== st.lang) { setLang(st.lang, true); did.push('ভাষা'); }
+      else lsSet('safwanTreatsLang', st.lang);
+    }
+    return did;
   }
   function applyImportExtras(replace) {
     var now = Date.now(), sv = loadSav(), addS = 0, addT = 0, seen = {}, haveT = {}, impT = {}, keepM = {};
@@ -3372,7 +3415,12 @@
     if (replace || addS) saveSav(sv);
     if (replace || addT) { saveTrash(); updBinCnt(); }
     importSav = []; importTrash = [];
-    return (addS ? ', সঞ্চয় ' + addS + 'টি' : '') + (addT ? ', রিসাইকেল বিন ' + addT + 'টি' : '');
+    var addK = 0;
+    if (importCake !== null) { try { addK = window.__cakeImport ? window.__cakeImport(importCake, importCakeReplace) : 0; } catch (e) {} }
+    importCake = null; importCakeReplace = false;
+    var didSet = importSettings ? applyImportedSettings(importSettings) : [];
+    importSettings = null;
+    return (addS ? ', সঞ্চয় ' + addS + 'টি' : '') + (addT ? ', রিসাইকেল বিন ' + addT + 'টি' : '') + (addK ? ', কেকের হিসাব ' + addK + 'টি' : '') + (didSet.length ? ', ' + didSet.join(' ও ') + ' সেটিংস' : '');
   }
   function finishImport(msg, replace) {
     msg += applyImportExtras(!!replace);
@@ -3394,7 +3442,7 @@
     reader.onload = function () {
       var text = String(reader.result || '');
       var list = [], cats = null, ords = [];
-      importCust = []; importSav = []; importTrash = [];
+      importCust = []; importSav = []; importTrash = []; importCake = null; importCakeReplace = false; importSettings = null;
       try {
         var s = text.replace(/^\uFEFF/, '').trim();
         if (/\.json$/i.test(f.name) || s.charAt(0) === '{' || s.charAt(0) === '[') {
@@ -3405,7 +3453,7 @@
         }
       } catch (e) { list = []; }
       input.value = '';
-      if (!list.length && !ords.length && !importSav.length && !importTrash.length) { uiNote('ফাইলে কোনো সঠিক এন্ট্রি পাওয়া যায়নি। ব্যাকআপ হিসেবে নামানো CSV বা JSON ফাইল বেছে নিন।'); return; }
+      if (!list.length && !ords.length && !importSav.length && !importTrash.length && !(importCake && importCake.length)) { uiNote('ফাইলে কোনো সঠিক এন্ট্রি পাওয়া যায়নি। ব্যাকআপ হিসেবে নামানো CSV বা JSON ফাইল বেছে নিন।'); return; }
       openImportModal(list, cats, f.name, ords);
     };
     reader.onerror = function () { input.value = ''; uiNote('ফাইলটি পড়া যায়নি।'); };
@@ -3442,6 +3490,7 @@
     var msgC = onlyEntries && orders.length
       ? 'এই ফাইলে শুধু আয়-ব্যয়ের এন্ট্রি আছে (অর্ডার নেই)। তাই বর্তমান ' + orders.length + 'টি অর্ডার, সেগুলোর পেমেন্ট এন্ট্রি, সঞ্চয় ও রিসাইকেল বিন অপরিবর্তিত থাকবে। বাকি সব এন্ট্রি মুছে ফাইলের ডেটা বসানো হবে। নিশ্চিত?'
       : 'বর্তমান সব এন্ট্রি মুছে ফাইলের ডেটা বসানো হবে। নিশ্চিত?';
+    if (importCake !== null) msgC = msgC.replace(/ নিশ্চিত\?$/, ' বর্তমান কেকের মোট খরচের হিসাবও ফাইলের হিসাব (' + importCake.length + 'টি) দিয়ে বদলে যাবে। নিশ্চিত?');
     if (!askOnce('imp', msgC, function () { $('impReplace').click(); }, { title: '⚠️ এন্ট্রি বদলে যাবে', yes: 'হ্যাঁ, বসান', cls: 'btn-save-exp' })) return;
     var tnow = Date.now();
     var keepE = onlyEntries ? entries.filter(linked) : [];
@@ -3467,6 +3516,7 @@
       orders.forEach(function (o) { delete tomb.o[o.id]; });
     }
     mergeCats(pending.cats);
+    importCakeReplace = importCake !== null;
     finishImport('✅ ব্যাকআপ থেকে ' + entries.length + 'টি এন্ট্রি' + (orders.length ? ' ও ' + orders.length + 'টি অর্ডার' : '') + (onlyEntries && orders.length ? ' (অর্ডার অপরিবর্তিত)' : '') + ' ফেরত এসেছে', !onlyEntries);
   });
 
@@ -3518,6 +3568,47 @@
     try { localStorage.setItem('safwanTreatsView', next); } catch (e) {}
   });
   applyView(document.documentElement.getAttribute('data-view') || 'pc');
+
+  /* ---------- ফোনের ব্যাক বাটন: খোলা উইন্ডো (modal) একটা একটা করে বন্ধ করে, সাইট থেকে বের করে না ----------
+     কোনো উইন্ডো খুললে ব্রাউজারের ইতিহাসে একটা ধাপ যোগ হয়; ব্যাক চাপলে সবচেয়ে ওপরের উইন্ডোটি বন্ধ হয়।
+     ✕ বা অন্য বাটনে বন্ধ করলে সেই ধাপটি নিজে থেকে সরে যায়। সব উইন্ডো বন্ধ থাকলে তবেই ব্যাক সাইট ছাড়ে। */
+  var modalLayers = [], backSkips = [];
+  function modalIsOpen(m) { return !!(m && m.classList && m.classList.contains('modal') && m.classList.contains('show')); }
+  function histBack() { history.back(); backSkips.push(Date.now()); } /* নিজে থেকে করা ব্যাক — এর popstate অ্যাপ উপেক্ষা করে */
+  function eatBackSkip() {
+    var now = Date.now();
+    while (backSkips.length && now - backSkips[0] > 2500) backSkips.shift();
+    if (backSkips.length) { backSkips.shift(); return true; }
+    return false;
+  }
+  function closeLayer(m) {
+    try { m.click(); } catch (e) {}                 /* ওভারলেতে চাপ — প্রতিটি উইন্ডোর নিজের বন্ধ করার কোড চলে */
+    if (modalIsOpen(m)) { var x = m.querySelector('.pop-x'); if (x) { try { x.click(); } catch (e) {} } }
+    if (modalIsOpen(m)) m.className = 'modal';
+  }
+  (function () {
+    if (!window.MutationObserver || !window.history || !history.pushState) return;
+    new MutationObserver(function (recs) {
+      var els = [];
+      recs.forEach(function (r) { var t = r.target; if (t && t.classList && t.classList.contains('modal') && els.indexOf(t) < 0) els.push(t); });
+      els.forEach(function (m) {
+        var idx = modalLayers.indexOf(m);
+        if (modalIsOpen(m)) {
+          if (idx < 0) { try { history.pushState({ modal: 1 }, ''); modalLayers.push(m); } catch (e) {} }
+        } else if (idx >= 0) {
+          modalLayers.splice(idx, 1);
+          try { histBack(); } catch (e) {}
+        }
+      });
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
+    window.addEventListener('popstate', function (ev) {
+      if (eatBackSkip()) { ev.stopImmediatePropagation(); return; }
+      if (!modalLayers.length) return;
+      var m = modalLayers.pop();
+      ev.stopImmediatePropagation();
+      closeLayer(m);
+    }, true);
+  })();
 
   /* ---------- মোবাইল ট্যাব ---------- */
   var popTab = null, popHolders = [], popPushed = false, popEl = null;
@@ -3599,7 +3690,7 @@
     popMarkTab(null);
     var had = popTab;
     popTab = null;
-    if (had && popPushed && !fromPop) { popPushed = false; try { history.back(); } catch (e) {} }
+    if (had && popPushed && !fromPop) { popPushed = false; try { histBack(); } catch (e) {} }
     popPushed = false;
   }
   function applyTab(tab) {
@@ -5283,8 +5374,12 @@
         var id = String(x.id);
         if (id.indexOf('ctdemo') === 0) { have[id] = 1; out.push(x); return; } /* ডেমো হিসাব ক্লাউডে যায় না */
         if (del[id]) { changed = true; return; }
-        have[id] = 1; out.push(x);
-        if (!rc[id]) jobs.push(function () { return J(base + '/cakes/' + encodeURIComponent(id) + '.json', 'PUT', x); });
+        have[id] = 1;
+        var rr0 = rc[id], lu = Number(x.u) || 0, ru = (rr0 && typeof rr0 === 'object') ? (Number(rr0.u) || 0) : 0;
+        if (!rr0) { out.push(x); jobs.push(function () { return J(base + '/cakes/' + encodeURIComponent(id) + '.json', 'PUT', x); }); }
+        else if (lu > ru) { out.push(x); jobs.push(function () { return J(base + '/cakes/' + encodeURIComponent(id) + '.json', 'PUT', x); }); } /* এডিট করা হিসাব ক্লাউডে যাবে */
+        else if (ru > lu && typeof rr0 === 'object' && isFinite(Number(rr0.amount))) { if (!rr0.id) rr0.id = id; out.push(rr0); changed = true; } /* অন্য ডিভাইসের এডিট এখানে আসবে */
+        else out.push(x);
       });
       for (k in rc) {
         if (k.indexOf('ctdemo') === 0) { (function (id) { jobs.push(function () { return J(base + '/cakes/' + encodeURIComponent(id) + '.json', 'DELETE'); }); })(k); continue; } /* আগে ভুলে গেলে ক্লাউড থেকে ডেমো মুছে যাবে */
@@ -5466,7 +5561,8 @@
   function setStatus(s, msg) {
     syncState.status = s; syncState.msg = msg || '';
     var b = $('cloudBtn');
-    b.textContent = s === 'busy' ? '☁️ সিঙ্ক হচ্ছে…' : s === 'ok' ? (syncCfg.on && demoOn() ? '☁️ ডেমো' : '☁️ সিঙ্ক ✓') : s === 'err' ? '☁️ ⚠ সমস্যা' : '☁️ ক্লাউড';
+    /* বাটনের লেখা: ডেমো চালু → “ডেমো চালু”; নয়তো সিঙ্ক চালু → “সিঙ্ক ✓”; কোনোটাই না → “ক্লাউড” (সিঙ্ক চলার সময় ও ত্রুটি হলে সেটাই দেখায়) */
+    b.textContent = (syncCfg.on && s === 'busy') ? '☁️ সিঙ্ক হচ্ছে…' : (syncCfg.on && s === 'err') ? '☁️ ⚠ সমস্যা' : demoOn() ? '☁️ ডেমো চালু' : syncCfg.on ? '☁️ সিঙ্ক ✓' : '☁️ ক্লাউড';
     b.title = s === 'err' ? msg : '';
     paintSyncModal();
   }
@@ -6200,7 +6296,7 @@
   $('bkDays').addEventListener('change', function () {
     lsSet('safwanTreatsBkDays', this.value);
     try { localStorage.removeItem('safwanTreatsBkSnooze'); } catch (e) {}
-    updBackupBanner(); toast(this.value === '0' ? '⏰ টেস্ট মোড: ব্যানার এখনই দেখাবে (ডেটা থাকলে)' : '⏰ রিমাইন্ডার: ' + this.value + ' দিন পর পর');
+    updBackupBanner(); toast(this.value === '0' ? '⏰ টেস্ট মোড: ব্যানার এখনই দেখাবে — এই উইন্ডো বন্ধ করে ওপরে দেখুন' : '⏰ রিমাইন্ডার: ' + this.value + ' দিন পর পর');
   });
   $('bkClose').addEventListener('click', function () { closeM('bkModal'); });
   $('bkX').addEventListener('click', function () { closeM('bkModal'); });
@@ -6319,8 +6415,9 @@
     if (!lsGet(BKB_KEY)) lsSet(BKB_KEY, String(now));
     var last = Number(lsGet(BK_KEY)) || 0, base = Number(lsGet(BKB_KEY)) || now;
     var ref = last || base, days = Math.floor((now - ref) / 864e5);
-    var hasData = entries.length || orders.length || customers.length;
-    if (!hasData || days < bkLimit() || now < (Number(lsGet(BKS_KEY)) || 0)) { el.className = 'bk-banner'; return; }
+    var ndB = nonDemo(), hasData = ndB.entries.length || ndB.orders.length || ndB.customers.length || ndB.savings.length || cakeBackupList().length;
+    /* “আজই (টেস্ট)” মোডে ডেটা না থাকলেও (বা শুধু ডেমো থাকলেও) ব্যানার দেখায়, যাতে পরীক্ষা করা যায় */
+    if ((!hasData && bkLimit() !== 0) || days < bkLimit() || now < (Number(lsGet(BKS_KEY)) || 0)) { el.className = 'bk-banner'; return; }
     el.innerHTML = '<span class="bk-txt">⚠️ ' + (last ? 'শেষ ব্যাকআপ ' + days + ' দিন আগে' : 'এখনো ব্যাকআপ নেওয়া হয়নি') + '</span>' +
       '<span class="bk-b"><button type="button" class="btn btn-json btn-sm" id="bkNow">💾 ব্যাকআপ নিন</button><button type="button" class="btn btn-cancel btn-sm" id="bkLater">পরে মনে করান</button></span>';
     el.className = 'bk-banner show';
@@ -6645,7 +6742,7 @@
     </div>
   </div>
 </div></div>
-<div class="modal" id="ccDetailModal" style="z-index:2000;"><div class="modal-box"><div class="stat-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;"><h2 id="ccDetTitle" style="margin:0;">🎂 কেক</h2><button type="button" class="pop-x" id="ccDetX" aria-label="বন্ধ করুন">✕</button></div><div id="ccDetBody"></div><div class="modal-actions"><button type="button" class="btn btn-save-exp" id="ccDetDel">🗑️ Delete</button><button type="button" class="btn btn-cancel" id="ccDetClose">বন্ধ করুন</button></div></div></div>
+<div class="modal" id="ccDetailModal" style="z-index:2000;"><div class="modal-box"><div class="stat-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;"><h2 id="ccDetTitle" style="margin:0;">🎂 কেক</h2><button type="button" class="pop-x" id="ccDetX" aria-label="বন্ধ করুন">✕</button></div><div id="ccDetBody"></div><div class="modal-actions"><button type="button" class="btn btn-json" id="ccDetEdit">✏️ Edit</button><button type="button" class="btn btn-save-exp" id="ccDetDel">🗑️ Delete</button><button type="button" class="btn btn-cancel" id="ccDetClose">বন্ধ করুন</button></div></div></div>
 <div class="modal" id="ccDelWarn" style="z-index:2100;"><div class="modal-box" style="text-align:center;"><div style="font-size:2.6rem;line-height:1;">⚠️</div><h2 style="margin:8px 0 6px;color:var(--red,#dc2626);">সতর্কতা!</h2><p id="ccDelWarnTxt" style="margin:0 0 6px;font-weight:700;"></p><p style="margin:0 0 14px;color:var(--muted);font-size:0.85rem;">Delete করলে এই হিসাব স্থায়ীভাবে মুছে যাবে এবং “কেকের মোট খরচ” থেকে এর টাকা বাদ যাবে। এটি আর ফিরে পাওয়া যাবে না।</p><div class="modal-actions"><button type="button" class="btn btn-save-exp" id="ccDelYes">🗑️ হ্যাঁ, Delete করুন</button><button type="button" class="btn btn-cancel" id="ccDelNo">না, থাক</button></div></div></div>
 <datalist id="ccIngList">
   <option value="ডিম"><option value="আটা"><option value="ময়দা"><option value="চিনি"><option value="তেল">
@@ -6717,7 +6814,8 @@
     try { localStorage.setItem(KEY, JSON.stringify({ cakeName: $('ccCakeName').value, rows: rows })); } catch (e) {}
   }
   function unitOptions(sel) {
-    return UNITS.map(function (u) { return '<option' + (u === sel ? ' selected' : '') + '>' + u + '</option>'; }).join('');
+    var L = UNITS.slice(); if (sel && L.indexOf(sel) < 0) L.push(sel);
+    return L.map(function (u) { return '<option' + (u === sel ? ' selected' : '') + '>' + u + '</option>'; }).join('');
   }
   function rowHtml(r) {
     return '<div class="cc-row" data-rid="' + r.id + '">' +
@@ -6761,14 +6859,51 @@
     $('cakeCostModal').setAttribute('data-mode', mode);
     $('ccTitle').textContent = mode === 'saved' ? '📒 কেকের মোট খরচ' : '🎂 কেকের খরচ হিসাব';
   }
+  /* ---- সেভ করা হিসাব এডিট ---- */
+  var editId = null, addTotalLabel = $('ccAddTotal').textContent;
+  function exitEdit() {
+    if (editId === null) return;
+    editId = null;
+    $('ccAddTotal').textContent = addTotalLabel;
+  }
+  function rowsFromItem(x) {
+    var out = [], legacy = false;
+    if (Array.isArray(x.ing) && x.ing.length) {
+      x.ing.forEach(function (g) { out.push({ id: rid++, name: String(g.n || ''), qty: String(g.q == null ? '' : g.q), unit: g.u || 'গ্রাম', rate: String(g.r || ''), per: g.p || g.u || 'কেজি' }); });
+    } else {
+      legacy = true;
+      String(x.items || '').split(', ').filter(Boolean).forEach(function (c) {
+        var m = c.match(/^(.*?)\s+([\d.,০-৯]+)\s+(\S.*)$/); if (!m) return;
+        out.push({ id: rid++, name: m[1], qty: m[2], unit: m[3], rate: '', per: m[3] === 'গ্রাম' ? 'কেজি' : m[3] === 'মিলি' ? 'লিটার' : m[3] });
+      });
+    }
+    if (!out.length) out.push(blankRow());
+    return { rows: out, legacy: legacy };
+  }
+  function openEdit(id) {
+    var x = totals.filter(function (t) { return String(t.id) === String(id); })[0]; if (!x) return;
+    var rr = rowsFromItem(x);
+    editId = String(x.id);
+    rows = rr.rows;
+    setMode('calc');
+    $('ccTitle').textContent = '✏️ হিসাব এডিট';
+    $('ccCakeName').value = x.name || ''; $('ccPrice').value = '';
+    render();
+    $('ccAddTotal').textContent = '✅ পরিবর্তন সেভ করুন';
+    $('ccMsg').style.color = '';
+    $('ccMsg').textContent = rr.legacy ? '⚠️ এই হিসাবে দর সেভ করা ছিল না — প্রতিটি উপকরণের দর দিয়ে “পরিবর্তন সেভ করুন” চাপুন।' : '✏️ “' + (x.name || 'কেক') + '” এডিট করছেন — বদলে “পরিবর্তন সেভ করুন” চাপুন।';
+    $('cakeCostModal').className = 'modal show';
+    try { $('ccScroll').scrollTop = 0; } catch (e) {}
+  }
   function open(mode) {
+    exitEdit();
     mode = mode === 'saved' ? 'saved' : 'calc';
     setMode(mode);
     if (mode === 'calc') { rows = defaultRows(); $('ccCakeName').value = ''; $('ccPrice').value = ''; render(); $('ccMsg').textContent = ''; }
     renderTotals();
     $('cakeCostModal').className = 'modal show';
   }
-  function close() { persist(); $('cakeCostModal').className = 'modal'; }
+  function close() { exitEdit(); persist(); $('cakeCostModal').className = 'modal'; }
 
   $('cakeCostTab').addEventListener('click', function (e) { e.stopPropagation(); open('calc'); });
   $('cakeStat').addEventListener('click', function () { open('saved'); });
@@ -6792,6 +6927,7 @@
   });
   $('ccCakeName').addEventListener('input', persist);
   $('ccReset').addEventListener('click', function () {
+    if (editId !== null) { var id0 = editId; openEdit(id0); if (editId !== null) { cakeToast('🔄 আগে সেভ করা অবস্থায় ফিরেছে'); return; } }
     rows = defaultRows(); $('ccCakeName').value = ''; $('ccPrice').value = '';
     render(); persist();
     try { $('ccCakeName').scrollIntoView({ block: 'center' }); } catch (e) {}
@@ -6829,6 +6965,37 @@
     saveTotals(); renderTotals();
   };
   window.__cakeReload = function () { loadTotals(); renderTotals(); };
+  /* ব্যাকআপ ফেরত আনা: replace=true হলে বর্তমান (ডেমো ছাড়া) হিসাব মুছে ফাইলেরগুলো বসে; নইলে শুধু নতুনগুলো যোগ হয়।
+     নতুন আইডি দেওয়া হয়, যাতে আগে মোছা হিসাবের ক্লাউড-চিহ্ন ফেরত আনা হিসাবকে আবার মুছে না ফেলে। */
+  function cleanTotal(x) {
+    if (!x || typeof x !== 'object' || x.id == null || !isFinite(Number(x.amount))) return null;
+    var o = { id: String(x.id), name: String(x.name == null ? '' : x.name), date: String(x.date == null ? '' : x.date), items: String(x.items == null ? '' : x.items), amount: Number(x.amount) };
+    if (Number(x.ts) > 0) o.ts = Number(x.ts);
+    if (Number(x.u) > 0) o.u = Number(x.u);
+    if (Array.isArray(x.ing)) o.ing = x.ing.filter(function (g) { return g && typeof g === 'object'; }).map(function (g) {
+      return { n: String(g.n == null ? '' : g.n), q: String(g.q == null ? '' : g.q), u: String(g.u == null ? '' : g.u), c: Number(g.c) || 0, r: String(g.r == null ? '' : g.r), p: String(g.p == null ? '' : g.p) };
+    });
+    return o;
+  }
+  function isDemoTotal(x) { return String(x.id || '').indexOf('ctdemo') === 0 || String(x.name || '').indexOf('(ডেমো)') === 0; }
+  window.__cakeImport = function (list, replace) {
+    var now = Date.now(), cleaned = [], added = 0;
+    (Array.isArray(list) ? list : []).forEach(function (x) { var c = cleanTotal(x); if (c && !isDemoTotal(c)) cleaned.push(c); });
+    if (replace) {
+      totals = totals.filter(function (x) { if (isDemoTotal(x)) return true; cakeDelAdd(x.id); return false; });
+    }
+    var sig = function (x) { return [x.name, x.amount, x.ts || x.date, x.items].join('|'); };
+    var have = {}, haveSig = {};
+    totals.forEach(function (x) { have[String(x.id)] = 1; haveSig[sig(x)] = 1; });
+    cleaned.forEach(function (c) {
+      if (have[c.id] || haveSig[sig(c)]) return;
+      c.id = 'ct' + now + '_' + added + '_' + Math.floor(Math.random() * 1000);
+      have[c.id] = 1; haveSig[sig(c)] = 1;
+      totals.push(c); added++;
+    });
+    saveTotals(); renderTotals(); cakeTouch();
+    return added;
+  };
   function sumTotals() { return totals.reduce(function (t, x) { return t + Number(x.amount || 0); }, 0); }
   var curMonth = null;
   var MON_BN = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
@@ -6947,14 +7114,35 @@
     }
     $('ccMsg').textContent = '';
     var nameTxt = ($('ccCakeName').value || '').trim();
+    var recName = nameTxt || used.map(function (r) { return r.name.trim(); }).slice(0, 3).join(', ');
+    var recItems = used.map(function (r) { return r.name.trim() + ' ' + r.qty + ' ' + r.unit; }).join(', ');
+    var recIng = used.map(function (r) { return { n: r.name.trim(), q: String(r.qty), u: r.unit, c: Math.round(calc(r) * 100) / 100, r: String(r.rate || ''), p: r.per }; });
+    var recAmt = Math.round(t * 100) / 100;
+    if (editId !== null) {
+      var ex = totals.filter(function (x) { return String(x.id) === editId; })[0];
+      if (!ex) {
+        exitEdit();
+        $('ccMsg').style.color = 'var(--red)';
+        $('ccMsg').textContent = '⚠️ এই হিসাবটি আর পাওয়া যায়নি (হয়তো অন্য ডিভাইস থেকে মুছে গেছে)।';
+        return;
+      }
+      var eid = editId;
+      ex.name = recName; ex.items = recItems; ex.ing = recIng; ex.amount = recAmt; ex.u = Date.now();
+      exitEdit();
+      saveTotals(); renderTotals(); cakeTouch();
+      open('saved');
+      detOpen(eid);
+      cakeToast('✅ হিসাব আপডেট হয়েছে — ' + fmt(t));
+      return;
+    }
     totals.push({
       id: 'ct' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-      name: nameTxt || used.map(function (r) { return r.name.trim(); }).slice(0, 3).join(', '),
+      name: recName,
       date: new Date().toLocaleDateString('bn-BD'),
       ts: Date.now(),
-      items: used.map(function (r) { return r.name.trim() + ' ' + r.qty + ' ' + r.unit; }).join(', '),
-      ing: used.map(function (r) { return { n: r.name.trim(), q: String(r.qty), u: r.unit, c: Math.round(calc(r) * 100) / 100, r: String(r.rate || ''), p: r.per }; }),
-      amount: Math.round(t * 100) / 100
+      items: recItems,
+      ing: recIng,
+      amount: recAmt
     });
     saveTotals(); renderTotals(); cakeTouch();
     close();
@@ -6984,6 +7172,10 @@
     if (dr && dr.nextElementSibling && !e.target.closest('.cc-saved-card')) { var dt2 = dr.nextElementSibling, hid = dt2.style.display === 'none'; dt2.style.display = hid ? '' : 'none'; dr.classList.toggle('on', hid); return; }
     var c = e.target.closest('.cc-saved-card'); if (!c) return;
     detOpen(c.getAttribute('data-tid'));
+  });
+  $('ccDetEdit').addEventListener('click', function () {
+    if (detId === null) return;
+    var id = detId; detClose(); openEdit(id);
   });
   $('ccDetClose').addEventListener('click', detClose);
   $('ccDetX').addEventListener('click', detClose);
