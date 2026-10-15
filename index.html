@@ -2208,13 +2208,7 @@
     function hasLock() { try { return !!localStorage.getItem('safwanTreatsLock_v1'); } catch (e) { return false; } }
     /* আসল ডেটা, সঞ্চয়, বিন, সিঙ্ক সেটিং বা PIN লক থাকলে ডেমো কিছুই ছোঁবে না (?demo=1 দিলেও না) */
     if (has('safwanTreatsData_v1') || has('safwanTreatsOrders_v1') || has('safwanTreatsCust_v1') || has('safwanTreatsSavings_v1') || has('safwanTreatsTrash_v1') || hasSync() || hasLock()) return;
-    var S = window.__demoSeed();
-    localStorage.setItem('safwanTreatsData_v1', JSON.stringify(S.e));
-    localStorage.setItem('safwanTreatsOrders_v1', JSON.stringify(S.o));
-    localStorage.setItem('safwanTreatsCust_v1', JSON.stringify(S.c));
-    localStorage.setItem('safwanTreatsCats_v1', JSON.stringify(S.k));
-    localStorage.setItem('safwanTreatsSavings_v1', JSON.stringify(S.sv));
-    localStorage.setItem('safwanTreatsTrash_v1', JSON.stringify(S.tr));
+    /* প্রথমবার খুললে অ্যাপ খালি থাকবে — ডেমো ডেটা নিজে থেকে ভরা হয় না; দরকার হলে “🧪 ডেমো ডেটা লোড করুন” বাটন ব্যবহার করুন */
   } catch (e) {}
 })();
 </script>
