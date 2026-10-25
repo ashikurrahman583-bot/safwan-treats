@@ -2055,6 +2055,10 @@
     </div>
     <div class="sync-warn">⚠️ যার কাছে URL ও কোড দুটোই থাকবে সে এই হিসাব দেখতে ও বদলাতে পারবে। কাউকে দেবেন না।</div>
     <div class="sync-msg" id="syncMsg"></div>
+    <div style="margin:8px 0;">
+      <button type="button" class="btn btn-export btn-sm" id="snapBtn">🗂 ক্লাউডের দৈনিক কপি (শেষ ৭ দিন)</button>
+      <div class="hint" id="snapList" style="margin-top:6px;"></div>
+    </div>
     <div class="modal-actions">
       <button type="button" class="btn btn-save-exp" id="syncDemoOff" style="display:none;">🧹 ডেমো ডাটা আগে বন্ধ করুন</button>
       <button type="button" class="btn btn-primary" id="syncConnect">🔗 সংযুক্ত করে সিঙ্ক শুরু করুন</button>
@@ -3488,9 +3492,42 @@
   function cakeBackupList() {
     try { return (window.__cakeGet ? window.__cakeGet() : []).filter(function (x) { return x && !isDemoCake(x); }); } catch (e) { return []; }
   }
-  $('jsonBtn').addEventListener('click', function () {
+  /* ---- সাফওয়ান/শায়লা/আশিকুরের খরচের হিসাব: ব্যাকআপ ও রিস্টোর ---- */
+  var PEXP = [
+    { id: 'safwan', key: 'khoroch-hisab-v1', demo: 'sfdemo', saved: '__sfSaved' },
+    { id: 'shayla', key: 'khoroch-hisab-shayla-v1', demo: 'shdemo-', saved: '__shaylaSaved' },
+    { id: 'ashikur', key: 'khoroch-hisab-ashikur-v1', demo: 'asdemo-', saved: '__ashikurSaved' }
+  ];
+  var importPExp = null; /* null = ফাইলে খরচের হিসাবের অংশ নেই */
+  function pexpGet(p) { try { var o = JSON.parse(localStorage.getItem(p.key) || 'null'); if (o && Array.isArray(o.entries)) return o; } catch (e) {} return { entries: [], u: 0 }; }
+  function pexpReal(p) { return pexpGet(p).entries.filter(function (e) { return e && e.id != null && String(e.id).indexOf(p.demo) !== 0; }); }
+  function pexpBackup() {
+    var o = {}, n = 0;
+    PEXP.forEach(function (p) { var a = pexpReal(p); if (a.length) { o[p.id] = a; n += a.length; } });
+    return n ? o : null;
+  }
+  function pexpCount(o) { var n = 0; if (o) PEXP.forEach(function (p) { if (Array.isArray(o[p.id])) n += o[p.id].length; }); return n; }
+  /* replace=true হলে বর্তমান (ডেমো ছাড়া) এন্ট্রি মুছে ফাইলেরগুলো বসে; নইলে শুধু নতুন এন্ট্রি যোগ হয় */
+  function pexpImport(imp, replace) {
+    var added = 0;
+    PEXP.forEach(function (p) {
+      if (!imp || !Array.isArray(imp[p.id]) || !imp[p.id].length) return;
+      var cur = pexpGet(p), demos = cur.entries.filter(function (e) { return e && String(e.id).indexOf(p.demo) === 0; });
+      var keep = replace ? [] : cur.entries.filter(function (e) { return e && String(e.id).indexOf(p.demo) !== 0; });
+      var seen = {}; keep.forEach(function (e) { seen[e.id] = 1; });
+      imp[p.id].forEach(function (e) {
+        if (!e || e.id == null || String(e.id).indexOf(p.demo) === 0 || seen[e.id]) return;
+        seen[e.id] = 1; keep.push(e); added++;
+      });
+      try { localStorage.setItem(p.key, JSON.stringify({ entries: keep.concat(demos), u: Date.now() })); } catch (e) {}
+      try { if (typeof window[p.saved] === 'function') window[p.saved](); } catch (e) {} /* ক্লাউডেও পাঠায় */
+    });
+    return added;
+  }
+  function runJsonBackup(done) {
+    var fin = function (ok) { if (fin.d) return; fin.d = true; if (done) done(ok); };
     var nd = nonDemo(), ckList = cakeBackupList(); /* ডেমো ডেটা ব্যাকআপে যাবে না */
-    if (!nd.entries.length && !nd.orders.length && !nd.savings.length && !nd.trash.length && !nd.customers.length && !ckList.length && !bazCount(bazNoDemo()) && !notesNoDemo().length) { uiNote('ব্যাকআপ করার মতো কোনো ডেটা নেই।'); return; }
+    if (!nd.entries.length && !nd.orders.length && !nd.savings.length && !nd.trash.length && !nd.customers.length && !ckList.length && !bazCount(bazNoDemo()) && !notesNoDemo().length && !pexpBackup()) { uiNote('ব্যাকআপ করার মতো কোনো ডেটা নেই।'); fin(true); return; }
     var out = nd.entries.map(function (e) { return Object.assign({}, e); });
     var outO = nd.orders.map(function (o) { return Object.assign({}, o); });
     var chain = Promise.resolve();
@@ -3515,11 +3552,13 @@
     });
     chain.catch(function () { toast('⚠️ কিছু মেমোর ছবি ব্যাকআপে যায়নি'); }).then(function () {
       var root = document.documentElement;
-      var payload = { app: 'Safwan Treats', version: 7, exportedAt: new Date().toISOString(), categories: catsNoDemo(), entries: out, orders: outO, customers: nd.customers, savings: nd.savings, savingsTotals: (function (a) { var d = 0, w = 0; a.forEach(function (x) { if (x.type === 'w') w += x.amount; else d += x.amount; }); return { deposit: d, withdraw: w, net: d - w }; })(nd.savings), trash: outT, cakeTotals: ckList, bazaar: bazNoDemo(), notes: notesNoDemo(),
+      var payload = { app: 'Safwan Treats', version: 7, exportedAt: new Date().toISOString(), categories: catsNoDemo(), entries: out, orders: outO, customers: nd.customers, savings: nd.savings, savingsTotals: (function (a) { var d = 0, w = 0; a.forEach(function (x) { if (x.type === 'w') w += x.amount; else d += x.amount; }); return { deposit: d, withdraw: w, net: d - w }; })(nd.savings), trash: outT, cakeTotals: ckList, bazaar: bazNoDemo(), notes: notesNoDemo(), personalExpenses: pexpBackup(),
         settings: { theme: root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light', lang: root.getAttribute('lang') === 'en' ? 'en' : 'bn', view: root.getAttribute('data-view') === 'mobile' ? 'mobile' : 'pc' } };
-      download(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'Safwan-Treats-Backup-' + today() + '.json');
-    });
-  });
+      try { download(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'Safwan-Treats-Backup-' + today() + '.json'); } catch (e) { fin(false); return; }
+      fin(true);
+    }).catch(function () { fin(false); });
+  }
+  $('jsonBtn').addEventListener('click', function () { runJsonBackup(); });
 
   /* ---------- Import (ব্যাকআপ ফেরত আনা) ---------- */
   function parseCSV(text, delim) {
@@ -3596,6 +3635,7 @@
     importCake = (p && !Array.isArray(p) && Array.isArray(p.cakeTotals)) ? p.cakeTotals : null;
     importBazaar = (p && !Array.isArray(p) && p.bazaar && typeof p.bazaar === 'object' && bazCount(p.bazaar)) ? p.bazaar : null;
     importNotes = (p && !Array.isArray(p) && Array.isArray(p.notes) && p.notes.length) ? p.notes : null;
+    importPExp = (p && !Array.isArray(p) && p.personalExpenses && typeof p.personalExpenses === 'object' && pexpCount(p.personalExpenses)) ? p.personalExpenses : null;
     importSettings = (p && !Array.isArray(p) && p.settings && typeof p.settings === 'object') ? p.settings : null;
     return { list: list, cats: cats, orders: ords };
   }
@@ -3606,7 +3646,7 @@
     var ni = 0, ne = 0;
     list.forEach(function (e) { if (e.type === 'income') ni++; else ne++; });
     $('impInfo').innerHTML = '<b>' + escapeHtml(fileName) + '</b> ফাইলে <b>' + list.length + '</b> টি এন্ট্রি পাওয়া গেছে (আয় ' + ni +
-      ', খরচ ' + ne + ')' + (pending.orders.length ? ' এবং <b>' + pending.orders.length + '</b> টি অর্ডার' : '') + (importSav.length ? ' এবং <b>' + importSav.length + '</b> টি সঞ্চয়' : '') + (importTrash.length ? ' এবং রিসাইকেল বিনে <b>' + importTrash.length + '</b> টি আইটেম' : '') + (importCake && importCake.length ? ' এবং <b>' + importCake.length + '</b> টি কেকের মোট খরচের হিসাব' : '') + (bazCount(importBazaar) ? ' এবং দৈনিক বাজার লিস্টের <b>' + bazCount(importBazaar) + '</b> টি জিনিস' : '') + (importNotes && importNotes.length ? ' এবং নোট পেডের <b>' + importNotes.length + '</b> টি নোট' : '') + (importSettings ? ' এবং থিম/ভাষা/ভিউ সেটিংস' : '') + '।<br>বর্তমানে ব্রাউজারে আছে <b>' + entries.length + '</b> টি এন্ট্রি।';
+      ', খরচ ' + ne + ')' + (pending.orders.length ? ' এবং <b>' + pending.orders.length + '</b> টি অর্ডার' : '') + (importSav.length ? ' এবং <b>' + importSav.length + '</b> টি সঞ্চয়' : '') + (importTrash.length ? ' এবং রিসাইকেল বিনে <b>' + importTrash.length + '</b> টি আইটেম' : '') + (importCake && importCake.length ? ' এবং <b>' + importCake.length + '</b> টি কেকের মোট খরচের হিসাব' : '') + (bazCount(importBazaar) ? ' এবং দৈনিক বাজার লিস্টের <b>' + bazCount(importBazaar) + '</b> টি জিনিস' : '') + (importNotes && importNotes.length ? ' এবং নোট পেডের <b>' + importNotes.length + '</b> টি নোট' : '') + (pexpCount(importPExp) ? ' এবং সাফওয়ান/শায়লা/আশিকুরের খরচের <b>' + pexpCount(importPExp) + '</b> টি এন্ট্রি' : '') + (importSettings ? ' এবং থিম/ভাষা/ভিউ সেটিংস' : '') + '।<br>বর্তমানে ব্রাউজারে আছে <b>' + entries.length + '</b> টি এন্ট্রি।';
     $('importModal').className = 'modal show';
   }
   function closeModal() { $('importModal').className = 'modal'; pending = null; }
@@ -3678,14 +3718,17 @@
     if (importCake !== null) { try { addK = window.__cakeImport ? window.__cakeImport(importCake, importCakeReplace) : 0; } catch (e) {} }
     importCake = null; importCakeReplace = false;
     var addB = 0;
-    if (importBazaar) { try { addB = bazImport(importBazaar, !!replace); } catch (e) {} }
+    if (importBazaar) { try { addB = bazImport(importBazaar, !!replace); } catch (e) {} try { if (window.__bazaarTouch) window.__bazaarTouch(); } catch (e) {} }
     importBazaar = null;
     var addN = 0;
-    if (importNotes) { try { addN = notesImport(importNotes, !!replace); } catch (e) {} }
+    if (importNotes) { try { addN = notesImport(importNotes, !!replace); } catch (e) {} try { if (window.__notesTouch) window.__notesTouch(); } catch (e) {} }
     importNotes = null;
+    var addP = 0;
+    if (importPExp) { try { addP = pexpImport(importPExp, !!replace); } catch (e) {} }
+    importPExp = null;
     var didSet = importSettings ? applyImportedSettings(importSettings) : [];
     importSettings = null;
-    return (addS ? ', সঞ্চয় ' + addS + 'টি' : '') + (addT ? ', রিসাইকেল বিন ' + addT + 'টি' : '') + (addK ? ', কেকের হিসাব ' + addK + 'টি' : '') + (addB ? ', বাজার লিস্ট ' + addB + 'টি' : '') + (addN ? ', নোট ' + addN + 'টি' : '') + (didSet.length ? ', ' + didSet.join(' ও ') + ' সেটিংস' : '');
+    return (addS ? ', সঞ্চয় ' + addS + 'টি' : '') + (addT ? ', রিসাইকেল বিন ' + addT + 'টি' : '') + (addK ? ', কেকের হিসাব ' + addK + 'টি' : '') + (addB ? ', বাজার লিস্ট ' + addB + 'টি' : '') + (addN ? ', নোট ' + addN + 'টি' : '') + (addP ? ', ব্যক্তিগত খরচ ' + addP + 'টি' : '') + (didSet.length ? ', ' + didSet.join(' ও ') + ' সেটিংস' : '');
   }
   function finishImport(msg, replace) {
     msg += applyImportExtras(!!replace);
@@ -3707,7 +3750,7 @@
     reader.onload = function () {
       var text = String(reader.result || '');
       var list = [], cats = null, ords = [];
-      importCust = []; importSav = []; importTrash = []; importCake = null; importCakeReplace = false; importSettings = null; importBazaar = null; importNotes = null;
+      importCust = []; importSav = []; importTrash = []; importCake = null; importCakeReplace = false; importSettings = null; importBazaar = null; importNotes = null; importPExp = null;
       try {
         var s = text.replace(/^\uFEFF/, '').trim();
         if (/\.json$/i.test(f.name) || s.charAt(0) === '{' || s.charAt(0) === '[') {
@@ -3736,7 +3779,7 @@
         }
       } catch (e) { list = []; }
       input.value = '';
-      if (!list.length && !ords.length && !importSav.length && !importTrash.length && !(importCake && importCake.length) && !bazCount(importBazaar) && !(importNotes && importNotes.length)) { uiNote('ফাইলে কোনো সঠিক এন্ট্রি পাওয়া যায়নি। ব্যাকআপ হিসেবে নামানো CSV বা JSON ফাইল বেছে নিন।'); return; }
+      if (!list.length && !ords.length && !importSav.length && !importTrash.length && !(importCake && importCake.length) && !bazCount(importBazaar) && !(importNotes && importNotes.length) && !pexpCount(importPExp)) { uiNote('ফাইলে কোনো সঠিক এন্ট্রি পাওয়া যায়নি। ব্যাকআপ হিসেবে নামানো CSV বা JSON ফাইল বেছে নিন।'); return; }
       openImportModal(list, cats, f.name, ords);
     };
     reader.onerror = function () { input.value = ''; uiNote('ফাইলটি পড়া যায়নি।'); };
@@ -5396,8 +5439,9 @@
   /* =====================================================
      ক্লাউড সিঙ্ক (Firebase Realtime Database – REST)
      ===================================================== */
-  var syncCfg = { url: '', code: '', on: false, last: 0 };
-  var syncState = { busy: false, again: false, status: 'off', msg: '' };
+  var APP_VERSION = '2026-10-26.1'; /* কোড বদলালে এটা বাড়ান — সিঙ্ক উইন্ডোতে দেখা যায় */
+  var syncCfg = { url: '', code: '', on: false, last: 0, snap: '' };
+  var syncState = { busy: false, again: false, status: 'off', msg: '', cloudVer: '' };
   var syncTimer = null;
   var pendingChoice = null;
 
@@ -5405,7 +5449,7 @@
     try {
       var o = JSON.parse(localStorage.getItem(SYNC_KEY) || '{}');
       syncCfg.url = o.url || ''; syncCfg.code = o.code || '';
-      syncCfg.on = !!(o.on && o.url && o.code); syncCfg.last = o.last || 0;
+      syncCfg.on = !!(o.on && o.url && o.code); syncCfg.last = o.last || 0; syncCfg.snap = o.snap || '';
     } catch (e) {}
   }
   function saveSyncCfg() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch (e) {} }
@@ -5423,9 +5467,9 @@
   }
   function cloudGet(c) {
     var base = endpoint(c || syncCfg).replace(/\.json$/, '');
-    return Promise.all(['entries', 'orders', 'del', 'cats', 'customers', 'savings', 'trash'].map(function (n) {
+    return Promise.all(['entries', 'orders', 'del', 'cats', 'customers', 'savings', 'trash', 'app'].map(function (n) {
       return fetchJson(base + '/' + n + '.json', { method: 'GET', cache: 'no-store' });
-    })).then(function (a) { return { entries: a[0], orders: a[1], del: a[2], cats: a[3], customers: a[4], savings: a[5], trash: a[6] }; });
+    })).then(function (a) { return { entries: a[0], orders: a[1], del: a[2], cats: a[3], customers: a[4], savings: a[5], trash: a[6], app: a[7] }; });
   }
   function cloudPut(payload) { return fetchJson(endpoint(syncCfg), { method: 'PATCH', body: JSON.stringify(payload) }); }
   /* ---------- সঞ্চয় ও রিসাইকেল বিন সিঙ্ক ---------- */
@@ -5574,7 +5618,7 @@
     var f = function (m) { var o = {}; for (var k in (m || {})) { if (dem && dem[k]) continue; o[k] = m[k]; } return o; };
     return { e: f(tomb.e), o: f(tomb.o), c: f(tomb.c), s: f(tomb.s), t: tomb.t };
   }
-  function buildPayload() { var nd = nonDemo(); return { v: 4, t: Date.now(), entries: nd.entries, orders: nd.orders, customers: nd.customers, cats: catsNoDemo(), savings: nd.savings.length ? nd.savings : null, savSum: (function (a) { var d = 0, w = 0; a.forEach(function (x) { if (x.type === 'w') w += x.amount; else d += x.amount; }); return { deposit: d, withdraw: w, net: d - w }; })(nd.savings), trash: nd.trash, del: cleanTomb() }; }
+  function buildPayload() { var nd = nonDemo(); return { v: 4, app: APP_VERSION, t: Date.now(), entries: nd.entries, orders: nd.orders, customers: nd.customers, cats: catsNoDemo(), savings: nd.savings.length ? nd.savings : null, savSum: (function (a) { var d = 0, w = 0; a.forEach(function (x) { if (x.type === 'w') w += x.amount; else d += x.amount; }); return { deposit: d, withdraw: w, net: d - w }; })(nd.savings), trash: nd.trash, del: cleanTomb() }; }
 
   /* ---------- ক্যাশ মেমোর ছবি সিঙ্ক (Firebase: memos / memosDel) ---------- */
   /* ছবি কোন কোন আইডির জন্য বৈধ: এন্ট্রি, অর্ডার ও রিসাইকেল বিনের আইটেম */
@@ -5704,6 +5748,35 @@
       jobs.forEach(function (j) { chain = chain.then(j); });
       return chain.then(function () { if (changed) window.__cakeSet(out); });
     });
+  }
+  /* ---------- দৈনিক ক্লাউড স্ন্যাপশট ----------
+     প্রতিদিনের প্রথম সিঙ্কে, এই ডিভাইস ক্লাউডে কিছু লেখার আগেই, ক্লাউডের বর্তমান ডেটার একটি কপি backups/<তারিখ>-এ জমে।
+     শেষ ৭ দিনের কপি থাকে। কপির ফরম্যাট “ব্যাকআপ ফেরত আনুন”-এর ফাইলের মতো। ক্লাউড খালি থাকলে কপি নেওয়া হয় না। ছবি এতে নেই। */
+  var SNAP_KEEP = 7;
+  function cloudSnapshot(remote) {
+    if (!syncCfg.on || !remote) return Promise.resolve();
+    var day = today(), tag = syncCfg.code + '|' + day;
+    if (syncCfg.snap === tag) return Promise.resolve();
+    var E = toArr(remote.entries), O = toArr(remote.orders);
+    if (!E.length && !O.length) return Promise.resolve();
+    var base = endpoint(syncCfg).replace(/\.json$/, '');
+    var J = function (u, m, b) { var o = { method: m, cache: 'no-store' }; if (b !== undefined) o.body = JSON.stringify(b); return fetchJson(u, o); };
+    var cc = (remote.cats && typeof remote.cats === 'object') ? remote.cats : {};
+    return J(base + '/backups/' + day + '.json?shallow=true', 'GET').then(function (ex) {
+      if (ex) return;
+      return J(base + '/backups/' + day + '.json', 'PUT', {
+        app: 'Safwan Treats', version: 7, snapshotOf: day, savedAt: Date.now(), savedBy: APP_VERSION, cloudVer: (typeof remote.app === 'string') ? remote.app : '',
+        categories: { income: toArr(cc.income), expense: toArr(cc.expense) },
+        entries: E, orders: O, customers: toArr(remote.customers), savings: toArr(remote.savings), trash: toArr(remote.trash)
+      });
+    }).then(function () {
+      return J(base + '/backups.json?shallow=true', 'GET');
+    }).then(function (k) {
+      var ds = Object.keys(k || {}).filter(function (d) { return /^\d{4}-\d{2}-\d{2}$/.test(d); }).sort();
+      var old = ds.slice(0, Math.max(0, ds.length - SNAP_KEEP)), chain = Promise.resolve();
+      old.forEach(function (d) { chain = chain.then(function () { return J(base + '/backups/' + d + '.json', 'DELETE'); }); });
+      return chain;
+    }).then(function () { syncCfg.snap = tag; saveSyncCfg(); });
   }
   function cloudErr(e) {
     if (e && (e.status === 401 || e.status === 403)) return 'অনুমতি নেই — Firebase-এর Rules ঠিকমতো Publish করা হয়েছে কিনা দেখুন।';
@@ -5884,8 +5957,15 @@
     else if (s === 'err') { cls += ' err'; txt = '⚠️ ' + esc(syncState.msg) + (syncCfg.last ? '<br>' + lastText() : ''); }
     else if (demoOn()) { txt = '🧪 ডেমো ডেটা চালু আছে — ডেমো ডেটা ক্লাউডে যায় না, শুধু এই ডিভাইসে দেখা যাচ্ছে।<br>ডেমো মুছে ফেললে সিঙ্ক আবার স্বাভাবিক দেখাবে।' + (syncCfg.last ? '<br>' + lastText() : ''); }
     else { cls += ' ok'; txt = '✅ সিঙ্ক চালু আছে — প্রতিটি পরিবর্তন নিজে থেকেই ক্লাউডে যাবে।<br>' + lastText(); }
+    var vl = '<br><small>🔖 এই ডিভাইসের ভার্সন: <b>' + APP_VERSION + '</b>';
+    if (syncCfg.on) {
+      var cv = syncState.cloudVer || '';
+      vl += ' · ক্লাউডে শেষ সিঙ্ক করা ভার্সন: <b>' + (cv ? esc(cv) : 'অজানা (পুরোনো হতে পারে)') + '</b>';
+      if (cv && cv > APP_VERSION) vl += '<br>⚠️ অন্য ডিভাইসে নতুন ভার্সন চলছে — এই ডিভাইসে পেজ রিলোড করুন।';
+    }
+    vl += '</small>';
     el.className = cls;
-    el.innerHTML = txt;
+    el.innerHTML = txt + vl;
     /* ডেমো চালু + ক্লাউড সিঙ্ক বন্ধ থাকলেই কেবল “ডেমো ডাটা আগে বন্ধ করুন” বাটন দেখাবে */
     var dBtn = $('syncDemoOff');
     if (dBtn) dBtn.style.display = (!syncCfg.on && demoOn()) ? '' : 'none';
@@ -5902,6 +5982,10 @@
     setStatus('busy');
     var getter = (opts && opts.remote !== undefined) ? Promise.resolve(opts.remote) : cloudGet();
     return getter.then(function (remote) {
+      syncState.cloudVer = (remote && typeof remote.app === 'string') ? remote.app : '';
+      /* ক্লাউডে কিছু লেখার আগে আজকের কপি জমানো — ব্যর্থ হলেও সিঙ্ক চলবে */
+      return cloudSnapshot(remote).catch(function () {}).then(function () { return remote; });
+    }).then(function (remote) {
       if (!remote || (!remote.entries && !remote.orders && !remote.del && !remote.savings && !remote.trash)) return cloudPut(buildPayload());
       var r = parseRemote(remote);
       if (opts && opts.mode) r = prepForMode(opts.mode, r);
@@ -5986,12 +6070,25 @@
   }
   function choose(mode) {
     if (!pendingChoice) return;
-    if (mode === 'cloud' && !askOnce('choose:cloud', 'এই ডিভাইসের বর্তমান সব ডেটা মুছে ক্লাউডের ডেটা বসবে। নিশ্চিত?', function () { choose('cloud'); }, { title: '☁️ ক্লাউডের ডেটা নেবেন?', yes: 'হ্যাঁ, ক্লাউডের ডেটা নিন', cls: 'btn-save-exp' })) return;
-    if (mode === 'local' && !askOnce('choose:local', 'ক্লাউডের বর্তমান ডেটা এই ডিভাইসের ডেটা দিয়ে বদলে যাবে (অন্য ডিভাইসেও)। নিশ্চিত?', function () { choose('local'); }, { title: '📱 এই ডিভাইসের ডেটা পাঠাবেন?', yes: 'হ্যাঁ, এই ডিভাইসের ডেটা পাঠান', cls: 'btn-save-exp' })) return;
+    if (mode === 'cloud' && !askOnce('choose:cloud', 'এই ডিভাইসের বর্তমান সব ডেটা মুছে ক্লাউডের ডেটা বসবে। তবে আগে এই ডিভাইসের ডেটার একটি ব্যাকআপ ফাইল নেমে যাবে। নিশ্চিত?', function () { choose('cloud'); }, { title: '☁️ ক্লাউডের ডেটা নেবেন?', yes: 'হ্যাঁ, ক্লাউডের ডেটা নিন', cls: 'btn-save-exp' })) return;
+    if (mode === 'local' && !askOnce('choose:local', 'ক্লাউডের বর্তমান ডেটা এই ডিভাইসের ডেটা দিয়ে বদলে যাবে (অন্য ডিভাইসেও)। তবে আগে ক্লাউডের বর্তমান ডেটার একটি কপি ফাইল হিসেবে নেমে যাবে। নিশ্চিত?', function () { choose('local'); }, { title: '📱 এই ডিভাইসের ডেটা পাঠাবেন?', yes: 'হ্যাঁ, এই ডিভাইসের ডেটা পাঠান', cls: 'btn-save-exp' })) return;
     var pc = pendingChoice; pendingChoice = null;
-    syncCfg.url = pc.url; syncCfg.code = pc.code; syncCfg.on = true; saveSyncCfg();
-    closeM('choiceModal');
-    runSync(true, { remote: pc.remote, mode: mode });
+    var go = function () {
+      syncCfg.url = pc.url; syncCfg.code = pc.code; syncCfg.on = true; saveSyncCfg();
+      closeM('choiceModal');
+      runSync(true, { remote: pc.remote, mode: mode });
+    };
+    var fail = function () { pendingChoice = pc; toast('⚠️ ব্যাকআপ নামানো যায়নি — তাই কিছু বদলানো হয়নি'); };
+    if (mode === 'cloud') {
+      /* এই ডিভাইসের ডেটা মুছবে — আগে পূর্ণ ব্যাকআপ ফাইল নামানো; না নামলে কিছুই বদলাবে না */
+      try { runJsonBackup(function (ok) { if (ok) go(); else fail(); }); } catch (e) { fail(); }
+    } else if (mode === 'local') {
+      /* ক্লাউডের ডেটা বদলাবে — আগে ক্লাউডের বর্তমান কপি নামানো */
+      try {
+        download(new Blob([JSON.stringify(pc.remote || {}, null, 2)], { type: 'application/json' }), 'Safwan-Treats-Cloud-Copy-' + today() + '.json');
+        go();
+      } catch (e) { fail(); }
+    } else go();
   }
 
   $('cloudBtn').addEventListener('click', openSync);
@@ -6001,6 +6098,33 @@
   $('syncModal').addEventListener('click', function (e) { if (e.target === this) closeM('syncModal'); });
   $('syncConnect').addEventListener('click', connectCloud);
   $('syncNow').addEventListener('click', function () { runSync(true); });
+  $('snapBtn').addEventListener('click', function () {
+    var box = $('snapList');
+    if (!syncCfg.on) { box.textContent = 'আগে ক্লাউড সিঙ্ক চালু করুন।'; return; }
+    box.textContent = 'খোঁজা হচ্ছে…';
+    var base = endpoint(syncCfg).replace(/\.json$/, '');
+    fetchJson(base + '/backups.json?shallow=true', { method: 'GET', cache: 'no-store' }).then(function (k) {
+      var ds = Object.keys(k || {}).filter(function (d) { return /^\d{4}-\d{2}-\d{2}$/.test(d); }).sort().reverse();
+      box.textContent = '';
+      if (!ds.length) { box.textContent = 'এখনও কোনো দৈনিক কপি জমেনি — প্রতিদিনের প্রথম সিঙ্কে একটি করে জমবে।'; return; }
+      var p = document.createElement('div');
+      p.textContent = 'তারিখ চেপে কপি ডাউনলোড করুন, তারপর “📤 ব্যাকআপ ফেরত আনুন” দিয়ে ফেরান:';
+      box.appendChild(p);
+      ds.forEach(function (d) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn btn-cancel btn-sm'; b.style.margin = '4px 4px 0 0'; b.textContent = '⬇ ' + d;
+        b.addEventListener('click', function () {
+          b.disabled = true;
+          fetchJson(base + '/backups/' + d + '.json', { method: 'GET', cache: 'no-store' }).then(function (sn) {
+            b.disabled = false;
+            if (!sn) { toast('⚠️ কপিটি পাওয়া যায়নি'); return; }
+            download(new Blob([JSON.stringify(sn, null, 2)], { type: 'application/json' }), 'Safwan-Cloud-Copy-' + d + '.json');
+          }).catch(function (e) { b.disabled = false; toast('⚠️ ' + cloudErr(e)); });
+        });
+        box.appendChild(b);
+      });
+    }).catch(function (e) { box.textContent = '⚠️ ' + cloudErr(e); });
+  });
   $('syncDemoOff').addEventListener('click', function () {
     if (syncCfg.on || !demoOn()) { paintSyncModal(); return; }
     if (!askOnce('demoOff', 'শুধু “ডেমো” লেখা নমুনা ডেটা মুছবে। আপনার আসল ডেটা থাকবে। ডেমো ডেটা বন্ধ করবেন?', function () { $('syncDemoOff').click(); }, { title: '🧹 ডেমো ডেটা মুছবেন?', yes: 'হ্যাঁ, ডেমো মুছুন', cls: 'btn-save-exp' })) return;
@@ -7775,6 +7899,8 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   function cfg() { try { var o = JSON.parse(localStorage.getItem('safwanTreatsSync_v1') || '{}'); return (o && o.on && o.url && o.code) ? o : null; } catch (e) { return null; } }
   function ep(c) { return c.url.replace(/\/+$/, '') + '/safwanTreats/' + encodeURIComponent(c.code) + '/sfExpense.json'; }
   function getLocal() { try { var p = JSON.parse(localStorage.getItem(SF_KEY) || 'null'); if (p && Array.isArray(p.entries)) return p; } catch (e) {} return { entries: [], u: 0 }; }
+  /* ডিভাইসের সেভ করা ডেটা পড়া না গেলে (নষ্ট/পড়া ব্যর্থ) false — তখন “সব এন্ট্রি মোছা হয়েছে” ধরা হবে না */
+  function localOk() { try { var r = localStorage.getItem(SF_KEY); if (r == null || r === '') return true; var p = JSON.parse(r); return !!(p && Array.isArray(p.entries)); } catch (e) { return false; } }
   function setLocal(o) { try { localStorage.setItem(SF_KEY, JSON.stringify(o)); } catch (e) {} }
   function req(url, opt) {
     var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -7782,35 +7908,97 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     if (ctl) opt.signal = ctl.signal;
     return fetch(url, opt).then(function (r) { clearTimeout(to); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }, function (e) { clearTimeout(to); throw e; });
   }
-  function push() {
-    var c = cfg(); if (!c) return Promise.resolve();
-    var l = getLocal();
-    return req(ep(c), { method: 'PUT', body: JSON.stringify({ u: l.u || Date.now(), entries: nd(l.entries) }) });
+  /* ---- ক্লাউড সিঙ্ক (নতুন): প্রতিটি এন্ট্রি আলাদা করে মেলানো, মোছার চিহ্ন, নিজে থেকে আবার চেষ্টা ---- */
+  var META_KEY = SF_KEY + ':sync', TOMB_MS = 90 * 864e5, RETRY = [5000, 15000, 45000, 120000, 300000], retryN = 0, retryT = null, syncQ = Promise.resolve();
+  function isOpen() { try { return ov.classList.contains('show'); } catch (e) { return false; } }
+  function kid(e) { return String(e.id); }
+  function fk(s) { return String(s).replace(/[%.$#\[\]\/]/g, function (c) { return '%' + ('0' + c.charCodeAt(0).toString(16).toUpperCase()).slice(-2); }); }
+  function ufk(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
+  function ss(o) { if (o === null || typeof o !== 'object') return JSON.stringify(o); if (Array.isArray(o)) return '[' + o.map(ss).join(',') + ']'; return '{' + Object.keys(o).sort().map(function (x) { return JSON.stringify(x) + ':' + ss(o[x]); }).join(',') + '}'; }
+  function arr(x) { return Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.keys(x).map(function (i) { return x[i]; }) : []); }
+  function mapIn(x) { var o = {}; if (x && typeof x === 'object') Object.keys(x).forEach(function (i) { o[ufk(i)] = Number(x[i]) || 0; }); return o; }
+  function mapOut(x) { var o = {}; Object.keys(x).forEach(function (i) { o[fk(i)] = x[i]; }); return o; }
+  function getMeta() { try { var m = JSON.parse(localStorage.getItem(META_KEY) || 'null'); if (m && m.snap && m.m && m.del) return m; } catch (e) {} return null; }
+  function setMeta(m) { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch (e) {} }
+  /* এই ডিভাইসে কী বদলেছে ধরা: নতুন/বদলানো এন্ট্রিতে সময় বসে, মুছে ফেলা এন্ট্রিতে মোছার চিহ্ন বসে */
+  function track(l) {
+    if (!localOk()) return getMeta() || { snap: {}, m: {}, del: {} };
+    var meta = getMeta(), now = Date.now(), cur = {}, id;
+    nd(l.entries).forEach(function (e) { if (e && e.id != null) cur[kid(e)] = e; });
+    if (!meta) {
+      meta = { snap: {}, m: {}, del: {} };
+      for (id in cur) { meta.snap[id] = ss(cur[id]); meta.m[id] = Number(l.u) || 1; }
+      setMeta(meta); return meta;
+    }
+    for (id in cur) {
+      var js = ss(cur[id]);
+      if (meta.snap[id] !== js) { meta.snap[id] = js; meta.m[id] = now; delete meta.del[id]; }
+    }
+    for (id in meta.snap) if (!cur[id]) { meta.del[id] = now; delete meta.snap[id]; delete meta.m[id]; }
+    setMeta(meta); return meta;
   }
-  /* ক্লাউড থেকে নতুন ডেটা আনা (যার সময় নতুন সে জেতে); প্রথমবার হলে দুটো মিলিয়ে নেওয়া */
-  function pull() {
+  /* এই ডিভাইস + ক্লাউড = সবার এন্ট্রি মিলিয়ে একটা তালিকা (যার সময় নতুন সে জেতে, মোছার পরে নতুন এডিট না হলে এন্ট্রি বাদ) */
+  function mergeDocs(l, meta, cloud) {
+    var cu = cloud ? Number(cloud.u) || 0 : 0, cm = mapIn(cloud && cloud.m), cd = mapIn(cloud && cloud.del);
+    var le = {}, ce = {}, order = [], seen = {}, id;
+    nd(l.entries).forEach(function (e) { if (e && e.id != null) { le[kid(e)] = e; if (!seen[kid(e)]) { seen[kid(e)] = 1; order.push(kid(e)); } } });
+    nd(arr(cloud && cloud.entries)).forEach(function (e) { if (e && e.id != null) { ce[kid(e)] = e; if (!seen[kid(e)]) { seen[kid(e)] = 1; order.push(kid(e)); } } });
+    Object.keys(meta.del).concat(Object.keys(cd)).forEach(function (i) { if (!seen[i]) { seen[i] = 1; order.push(i); } });
+    var out = { entries: [], m: {}, del: {}, cm: {} }, cutoff = Date.now() - TOMB_MS;
+    order.forEach(function (i) {
+      var lm = le[i] ? (Number(meta.m[i]) || 1) : -1, rm = ce[i] ? (cm[i] != null ? cm[i] : cu) : -1;
+      var td = Math.max(Number(meta.del[i]) || 0, cd[i] || 0), wm = Math.max(lm, rm);
+      var ent = wm < 0 ? null : (lm >= rm ? le[i] : ce[i]);
+      if (ent && wm > td) { out.entries.push(ent); out.m[i] = wm; }
+      else if (td > cutoff) out.del[i] = td;
+      if (ce[i]) out.cm[i] = rm;
+    });
+    out.cloudSig = ss({ e: Object.keys(ce).sort().map(function (i) { return [i, ss(ce[i]), out.cm[i]]; }), d: cd });
+    out.sig = ss({ e: out.entries.map(function (e) { return [kid(e), ss(e), out.m[kid(e)]]; }).sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; }), d: out.del });
+    return out;
+  }
+  function localSig(l) { return ss(nd(l.entries).map(function (e) { return [kid(e), ss(e)]; })); }
+  /* mode: true = ক্লাউডের নতুন এন্ট্রি এই ডিভাইসেও বসাও (খরচ-উইন্ডো খোলার সময়); false = শুধু ক্লাউডে পাঠাও; 'auto' = উইন্ডো বন্ধ থাকলে বসাও */
+  function reconcile(mode) {
     var c = cfg(); if (!c) { status(''); return Promise.resolve(); }
-    status('☁️ ক্লাউড থেকে আনা হচ্ছে…');
+    if (!localOk()) { status('⚠️ এই ডিভাইসের ডেটা পড়া যায়নি — সিঙ্ক থামানো হয়েছে, কিছু মোছা হয়নি'); return Promise.resolve(); }
+    var l = getLocal(), meta = track(l), lsig = localSig(l);
+    status('☁️ সিঙ্ক হচ্ছে…');
     return req(ep(c), { method: 'GET', cache: 'no-store' }).then(function (cloud) {
-      var l = getLocal(), cu = cloud ? Number(cloud.u) || 0 : 0, ce = (cloud && Array.isArray(cloud.entries)) ? nd(cloud.entries) : [];
-      var lent = nd(l.entries), demo = l.entries.filter(isDemo);
-      if (cloud && cu && !l.u && lent.length) {                 // প্রথমবার: দুই দিকের এন্ট্রি মিলিয়ে নিন
-        var seen = {}, all = [];
-        ce.concat(lent).forEach(function (e) { if (e && e.id != null && !seen[e.id]) { seen[e.id] = 1; all.push(e); } });
-        setLocal({ entries: all.concat(demo), u: Date.now() }); return push();
+      var r = mergeDocs(l, meta, cloud), apply = mode === true || (mode === 'auto' && !isOpen());
+      var jobs = Promise.resolve();
+      if (r.sig !== r.cloudSig && (r.entries.length || Object.keys(r.del).length || cloud)) {
+        var cu = cloud ? Number(cloud.u) || 0 : 0;
+        jobs = req(ep(c), { method: 'PUT', body: JSON.stringify({ u: Math.max(Date.now(), cu + 1), entries: r.entries, m: mapOut(r.m), del: mapOut(r.del) }) });
       }
-      if (cloud && cu > (l.u || 0)) { setLocal({ entries: ce.concat(demo), u: cu }); return; }   // ক্লাউডের ডেটা নতুন
-      if (!cloud || (l.u || 0) > cu || (!cu && lent.length)) {                       // এই ডিভাইসের ডেটা নতুন
-        if (!l.u && lent.length) { l.u = Date.now(); setLocal(l); }
-        if (l.u || lent.length) return push();
-      }
-    }).then(function () { status('☁️ সিঙ্ক হয়েছে'); }, function () { status('⚠️ ক্লাউডে সংযোগ হয়নি — অফলাইনে চলছে'); });
+      return jobs.then(function () {
+        if (apply) {
+          var cur = getLocal(), demo = (cur.entries || []).filter(isDemo), snap = {};
+          if (localSig(cur) !== lsig) return;   /* অনুরোধ চলার সময় এখানে নতুন পরিবর্তন হয়েছে — পরের বারে মেলানো হবে */
+          r.entries.forEach(function (e) { snap[kid(e)] = ss(e); });
+          if (localSig(cur) !== ss(r.entries.map(function (e) { return [kid(e), ss(e)]; }))) { var nl = {}; Object.keys(cur).forEach(function (x) { nl[x] = cur[x]; }); nl.entries = r.entries.concat(demo); nl.u = Math.max(Number(cur.u) || 0, Number(cloud && cloud.u) || 0); setLocal(nl); }
+          setMeta({ snap: snap, m: r.m, del: r.del });
+        }
+      });
+    }).then(function () { retryN = 0; clearTimeout(retryT); status('☁️ সিঙ্ক হয়েছে'); }, function () {
+      status('⚠️ ক্লাউডে পাঠানো যায়নি — নিজে থেকে আবার চেষ্টা হবে');
+      clearTimeout(retryT); retryT = setTimeout(function () { enqueue('auto'); }, RETRY[Math.min(retryN++, RETRY.length - 1)]);
+    });
   }
+  function enqueue(mode) { syncQ = syncQ.then(function () { return reconcile(mode); }, function () { return reconcile(mode); }); return syncQ; }
+  function push() { return enqueue(false); }
+  function pull() { return enqueue(true); }
+  function flushNow() { clearTimeout(pushT); if (cfg()) enqueue('auto'); }
   window.__sfSaved = function () {
+    try { track(getLocal()); } catch (e) {}   /* সিঙ্ক বন্ধ থাকলেও পরিবর্তন লিখে রাখা হয়, পরে চালু করলে ঠিকমতো মিলবে */
     if (!cfg()) return;
     status('☁️ সেভ হচ্ছে…'); clearTimeout(pushT);
-    pushT = setTimeout(function () { push().then(function () { status('☁️ সিঙ্ক হয়েছে'); }, function () { status('⚠️ ক্লাউডে পাঠানো যায়নি — আবার সেভ করলে চেষ্টা হবে'); }); }, 700);
+    pushT = setTimeout(function () { enqueue(false); }, 700);
   };
+  try { track(getLocal()); } catch (e) {}
+  setTimeout(function () { if (cfg()) enqueue('auto'); }, 3000);
+  try { window.addEventListener('online', function () { flushNow(); }); } catch (e) {}
+  try { document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' || document.visibilityState === 'visible') flushNow(); }); } catch (e) {}
   function build() {
     if (frame) { frame.remove(); frame = null; }
     frame = document.createElement('iframe'); frame.id = 'sfExpFrame'; frame.title = 'সাফওয়ান এর খরচ';
@@ -7833,7 +8021,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   var layers = [], igPop = 0;
   function layerPush(k) { try { history.pushState({ sfExp: k }, ''); layers.push(k); } catch (e) {} }
   function toFrame(m) { try { if (frame && frame.contentWindow) frame.contentWindow.postMessage(m, '*'); } catch (e) {} }
-  function hideOv() { ov.classList.remove('show'); document.body.style.overflow = ''; }
+  function hideOv() { ov.classList.remove('show'); document.body.style.overflow = ''; try { flushNow(); } catch (e) {} }
   window.addEventListener('message', function (ev) {
     var d = ev.data;
     if (!d || !frame || ev.source !== frame.contentWindow || !d.sfDlg) return;
@@ -7892,6 +8080,8 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   function cfg() { try { var o = JSON.parse(localStorage.getItem('safwanTreatsSync_v1') || '{}'); return (o && o.on && o.url && o.code) ? o : null; } catch (e) { return null; } }
   function ep(c) { return c.url.replace(/\/+$/, '') + '/safwanTreats/' + encodeURIComponent(c.code) + '/sfShayla.json'; }
   function getLocal() { try { var p = JSON.parse(localStorage.getItem(SF_KEY) || 'null'); if (p && Array.isArray(p.entries)) return p; } catch (e) {} return { entries: [], u: 0 }; }
+  /* ডিভাইসের সেভ করা ডেটা পড়া না গেলে (নষ্ট/পড়া ব্যর্থ) false — তখন “সব এন্ট্রি মোছা হয়েছে” ধরা হবে না */
+  function localOk() { try { var r = localStorage.getItem(SF_KEY); if (r == null || r === '') return true; var p = JSON.parse(r); return !!(p && Array.isArray(p.entries)); } catch (e) { return false; } }
   function setLocal(o) { try { localStorage.setItem(SF_KEY, JSON.stringify(o)); } catch (e) {} }
   function req(url, opt) {
     var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -7899,34 +8089,97 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     if (ctl) opt.signal = ctl.signal;
     return fetch(url, opt).then(function (r) { clearTimeout(to); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }, function (e) { clearTimeout(to); throw e; });
   }
-  function push() {
-    var c = cfg(); if (!c) return Promise.resolve();
-    var l = getLocal();
-    return req(ep(c), { method: 'PUT', body: JSON.stringify({ u: l.u || Date.now(), entries: nd(l.entries) }) });
+  /* ---- ক্লাউড সিঙ্ক (নতুন): প্রতিটি এন্ট্রি আলাদা করে মেলানো, মোছার চিহ্ন, নিজে থেকে আবার চেষ্টা ---- */
+  var META_KEY = SF_KEY + ':sync', TOMB_MS = 90 * 864e5, RETRY = [5000, 15000, 45000, 120000, 300000], retryN = 0, retryT = null, syncQ = Promise.resolve();
+  function isOpen() { try { return ov.classList.contains('show'); } catch (e) { return false; } }
+  function kid(e) { return String(e.id); }
+  function fk(s) { return String(s).replace(/[%.$#\[\]\/]/g, function (c) { return '%' + ('0' + c.charCodeAt(0).toString(16).toUpperCase()).slice(-2); }); }
+  function ufk(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
+  function ss(o) { if (o === null || typeof o !== 'object') return JSON.stringify(o); if (Array.isArray(o)) return '[' + o.map(ss).join(',') + ']'; return '{' + Object.keys(o).sort().map(function (x) { return JSON.stringify(x) + ':' + ss(o[x]); }).join(',') + '}'; }
+  function arr(x) { return Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.keys(x).map(function (i) { return x[i]; }) : []); }
+  function mapIn(x) { var o = {}; if (x && typeof x === 'object') Object.keys(x).forEach(function (i) { o[ufk(i)] = Number(x[i]) || 0; }); return o; }
+  function mapOut(x) { var o = {}; Object.keys(x).forEach(function (i) { o[fk(i)] = x[i]; }); return o; }
+  function getMeta() { try { var m = JSON.parse(localStorage.getItem(META_KEY) || 'null'); if (m && m.snap && m.m && m.del) return m; } catch (e) {} return null; }
+  function setMeta(m) { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch (e) {} }
+  /* এই ডিভাইসে কী বদলেছে ধরা: নতুন/বদলানো এন্ট্রিতে সময় বসে, মুছে ফেলা এন্ট্রিতে মোছার চিহ্ন বসে */
+  function track(l) {
+    if (!localOk()) return getMeta() || { snap: {}, m: {}, del: {} };
+    var meta = getMeta(), now = Date.now(), cur = {}, id;
+    nd(l.entries).forEach(function (e) { if (e && e.id != null) cur[kid(e)] = e; });
+    if (!meta) {
+      meta = { snap: {}, m: {}, del: {} };
+      for (id in cur) { meta.snap[id] = ss(cur[id]); meta.m[id] = Number(l.u) || 1; }
+      setMeta(meta); return meta;
+    }
+    for (id in cur) {
+      var js = ss(cur[id]);
+      if (meta.snap[id] !== js) { meta.snap[id] = js; meta.m[id] = now; delete meta.del[id]; }
+    }
+    for (id in meta.snap) if (!cur[id]) { meta.del[id] = now; delete meta.snap[id]; delete meta.m[id]; }
+    setMeta(meta); return meta;
   }
-  function pull() {
+  /* এই ডিভাইস + ক্লাউড = সবার এন্ট্রি মিলিয়ে একটা তালিকা (যার সময় নতুন সে জেতে, মোছার পরে নতুন এডিট না হলে এন্ট্রি বাদ) */
+  function mergeDocs(l, meta, cloud) {
+    var cu = cloud ? Number(cloud.u) || 0 : 0, cm = mapIn(cloud && cloud.m), cd = mapIn(cloud && cloud.del);
+    var le = {}, ce = {}, order = [], seen = {}, id;
+    nd(l.entries).forEach(function (e) { if (e && e.id != null) { le[kid(e)] = e; if (!seen[kid(e)]) { seen[kid(e)] = 1; order.push(kid(e)); } } });
+    nd(arr(cloud && cloud.entries)).forEach(function (e) { if (e && e.id != null) { ce[kid(e)] = e; if (!seen[kid(e)]) { seen[kid(e)] = 1; order.push(kid(e)); } } });
+    Object.keys(meta.del).concat(Object.keys(cd)).forEach(function (i) { if (!seen[i]) { seen[i] = 1; order.push(i); } });
+    var out = { entries: [], m: {}, del: {}, cm: {} }, cutoff = Date.now() - TOMB_MS;
+    order.forEach(function (i) {
+      var lm = le[i] ? (Number(meta.m[i]) || 1) : -1, rm = ce[i] ? (cm[i] != null ? cm[i] : cu) : -1;
+      var td = Math.max(Number(meta.del[i]) || 0, cd[i] || 0), wm = Math.max(lm, rm);
+      var ent = wm < 0 ? null : (lm >= rm ? le[i] : ce[i]);
+      if (ent && wm > td) { out.entries.push(ent); out.m[i] = wm; }
+      else if (td > cutoff) out.del[i] = td;
+      if (ce[i]) out.cm[i] = rm;
+    });
+    out.cloudSig = ss({ e: Object.keys(ce).sort().map(function (i) { return [i, ss(ce[i]), out.cm[i]]; }), d: cd });
+    out.sig = ss({ e: out.entries.map(function (e) { return [kid(e), ss(e), out.m[kid(e)]]; }).sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; }), d: out.del });
+    return out;
+  }
+  function localSig(l) { return ss(nd(l.entries).map(function (e) { return [kid(e), ss(e)]; })); }
+  /* mode: true = ক্লাউডের নতুন এন্ট্রি এই ডিভাইসেও বসাও (খরচ-উইন্ডো খোলার সময়); false = শুধু ক্লাউডে পাঠাও; 'auto' = উইন্ডো বন্ধ থাকলে বসাও */
+  function reconcile(mode) {
     var c = cfg(); if (!c) { status(''); return Promise.resolve(); }
-    status('☁️ ক্লাউড থেকে আনা হচ্ছে…');
+    if (!localOk()) { status('⚠️ এই ডিভাইসের ডেটা পড়া যায়নি — সিঙ্ক থামানো হয়েছে, কিছু মোছা হয়নি'); return Promise.resolve(); }
+    var l = getLocal(), meta = track(l), lsig = localSig(l);
+    status('☁️ সিঙ্ক হচ্ছে…');
     return req(ep(c), { method: 'GET', cache: 'no-store' }).then(function (cloud) {
-      var l = getLocal(), cu = cloud ? Number(cloud.u) || 0 : 0, ce = (cloud && Array.isArray(cloud.entries)) ? nd(cloud.entries) : [];
-      var lent = nd(l.entries), demo = l.entries.filter(isDemo);
-      if (cloud && cu && !l.u && lent.length) {
-        var seen = {}, all = [];
-        ce.concat(lent).forEach(function (e) { if (e && e.id != null && !seen[e.id]) { seen[e.id] = 1; all.push(e); } });
-        setLocal({ entries: all.concat(demo), u: Date.now() }); return push();
+      var r = mergeDocs(l, meta, cloud), apply = mode === true || (mode === 'auto' && !isOpen());
+      var jobs = Promise.resolve();
+      if (r.sig !== r.cloudSig && (r.entries.length || Object.keys(r.del).length || cloud)) {
+        var cu = cloud ? Number(cloud.u) || 0 : 0;
+        jobs = req(ep(c), { method: 'PUT', body: JSON.stringify({ u: Math.max(Date.now(), cu + 1), entries: r.entries, m: mapOut(r.m), del: mapOut(r.del) }) });
       }
-      if (cloud && cu > (l.u || 0)) { setLocal({ entries: ce.concat(demo), u: cu }); return; }
-      if (!cloud || (l.u || 0) > cu || (!cu && lent.length)) {
-        if (!l.u && lent.length) { l.u = Date.now(); setLocal(l); }
-        if (l.u || lent.length) return push();
-      }
-    }).then(function () { status('☁️ সিঙ্ক হয়েছে'); }, function () { status('⚠️ ক্লাউডে সংযোগ হয়নি — অফলাইনে চলছে'); });
+      return jobs.then(function () {
+        if (apply) {
+          var cur = getLocal(), demo = (cur.entries || []).filter(isDemo), snap = {};
+          if (localSig(cur) !== lsig) return;   /* অনুরোধ চলার সময় এখানে নতুন পরিবর্তন হয়েছে — পরের বারে মেলানো হবে */
+          r.entries.forEach(function (e) { snap[kid(e)] = ss(e); });
+          if (localSig(cur) !== ss(r.entries.map(function (e) { return [kid(e), ss(e)]; }))) { var nl = {}; Object.keys(cur).forEach(function (x) { nl[x] = cur[x]; }); nl.entries = r.entries.concat(demo); nl.u = Math.max(Number(cur.u) || 0, Number(cloud && cloud.u) || 0); setLocal(nl); }
+          setMeta({ snap: snap, m: r.m, del: r.del });
+        }
+      });
+    }).then(function () { retryN = 0; clearTimeout(retryT); status('☁️ সিঙ্ক হয়েছে'); }, function () {
+      status('⚠️ ক্লাউডে পাঠানো যায়নি — নিজে থেকে আবার চেষ্টা হবে');
+      clearTimeout(retryT); retryT = setTimeout(function () { enqueue('auto'); }, RETRY[Math.min(retryN++, RETRY.length - 1)]);
+    });
   }
+  function enqueue(mode) { syncQ = syncQ.then(function () { return reconcile(mode); }, function () { return reconcile(mode); }); return syncQ; }
+  function push() { return enqueue(false); }
+  function pull() { return enqueue(true); }
+  function flushNow() { clearTimeout(pushT); if (cfg()) enqueue('auto'); }
   window.__shaylaSaved = function () {
+    try { track(getLocal()); } catch (e) {}   /* সিঙ্ক বন্ধ থাকলেও পরিবর্তন লিখে রাখা হয়, পরে চালু করলে ঠিকমতো মিলবে */
     if (!cfg()) return;
     status('☁️ সেভ হচ্ছে…'); clearTimeout(pushT);
-    pushT = setTimeout(function () { push().then(function () { status('☁️ সিঙ্ক হয়েছে'); }, function () { status('⚠️ ক্লাউডে পাঠানো যায়নি — আবার সেভ করলে চেষ্টা হবে'); }); }, 700);
+    pushT = setTimeout(function () { enqueue(false); }, 700);
   };
+  try { track(getLocal()); } catch (e) {}
+  setTimeout(function () { if (cfg()) enqueue('auto'); }, 3000);
+  try { window.addEventListener('online', function () { flushNow(); }); } catch (e) {}
+  try { document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' || document.visibilityState === 'visible') flushNow(); }); } catch (e) {}
   /* ডেমো ডেটা: মূল পেজের “ডেমো ডেটা লোড/মুছুন” বাটনের সাথে চলে — ডেমো ক্লাউডে যায় না */
   var DEMO_ROWS = [[9,"in",30000,"মাসিক সঞ্চয় জমা"],[9,"out",450,"সবজি বাজার"],[8,"out",1800,"মুদি বাজার"],[7,"out",250,"রিকশা ভাড়া"],[7,"out",600,"মাছ-মাংস"],[6,"out",950,"গ্যাস বিল"],[5,"out",380,"শিশুর দুধ ও বিস্কুট"],[4,"in",5000,"উপহার পাওয়া"],[4,"out",1200,"প্রসাধনী কেনা"],[3,"out",700,"ফলমূল"],[2,"out",2200,"পোশাক কেনা"],[1,"out",400,"মোবাইল রিচার্জ"],[1,"out",150,"চা-নাস্তা"],[0,"out",320,"সবজি বাজার"],[0,"out",90,"অটো ভাড়া"]], DP = 'shdemo-';
   function isDemo(e) { return !!e && String(e.id).indexOf(DP) === 0; }
@@ -7968,7 +8221,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   /* ফোনের ব্যাক বাটন: ভেতরের পপআপ ও খরচ-উইন্ডো একটা একটা করে বন্ধ হয় */
   function layerPush(k) { try { history.pushState({ shExp: k }, ''); layers.push(k); } catch (e) {} }
   function toFrame(m) { try { if (frame && frame.contentWindow) frame.contentWindow.postMessage(m, '*'); } catch (e) {} }
-  function hideOv() { ov.classList.remove('show'); document.body.style.overflow = ''; }
+  function hideOv() { ov.classList.remove('show'); document.body.style.overflow = ''; try { flushNow(); } catch (e) {} }
   window.addEventListener('message', function (ev) {
     var d = ev.data;
     if (!d || !frame || ev.source !== frame.contentWindow || !d.sfDlg) return;
@@ -8027,6 +8280,8 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   function cfg() { try { var o = JSON.parse(localStorage.getItem('safwanTreatsSync_v1') || '{}'); return (o && o.on && o.url && o.code) ? o : null; } catch (e) { return null; } }
   function ep(c) { return c.url.replace(/\/+$/, '') + '/safwanTreats/' + encodeURIComponent(c.code) + '/sfAshikur.json'; }
   function getLocal() { try { var p = JSON.parse(localStorage.getItem(SF_KEY) || 'null'); if (p && Array.isArray(p.entries)) return p; } catch (e) {} return { entries: [], u: 0 }; }
+  /* ডিভাইসের সেভ করা ডেটা পড়া না গেলে (নষ্ট/পড়া ব্যর্থ) false — তখন “সব এন্ট্রি মোছা হয়েছে” ধরা হবে না */
+  function localOk() { try { var r = localStorage.getItem(SF_KEY); if (r == null || r === '') return true; var p = JSON.parse(r); return !!(p && Array.isArray(p.entries)); } catch (e) { return false; } }
   function setLocal(o) { try { localStorage.setItem(SF_KEY, JSON.stringify(o)); } catch (e) {} }
   function req(url, opt) {
     var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -8034,34 +8289,97 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     if (ctl) opt.signal = ctl.signal;
     return fetch(url, opt).then(function (r) { clearTimeout(to); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }, function (e) { clearTimeout(to); throw e; });
   }
-  function push() {
-    var c = cfg(); if (!c) return Promise.resolve();
-    var l = getLocal();
-    return req(ep(c), { method: 'PUT', body: JSON.stringify({ u: l.u || Date.now(), entries: nd(l.entries) }) });
+  /* ---- ক্লাউড সিঙ্ক (নতুন): প্রতিটি এন্ট্রি আলাদা করে মেলানো, মোছার চিহ্ন, নিজে থেকে আবার চেষ্টা ---- */
+  var META_KEY = SF_KEY + ':sync', TOMB_MS = 90 * 864e5, RETRY = [5000, 15000, 45000, 120000, 300000], retryN = 0, retryT = null, syncQ = Promise.resolve();
+  function isOpen() { try { return ov.classList.contains('show'); } catch (e) { return false; } }
+  function kid(e) { return String(e.id); }
+  function fk(s) { return String(s).replace(/[%.$#\[\]\/]/g, function (c) { return '%' + ('0' + c.charCodeAt(0).toString(16).toUpperCase()).slice(-2); }); }
+  function ufk(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
+  function ss(o) { if (o === null || typeof o !== 'object') return JSON.stringify(o); if (Array.isArray(o)) return '[' + o.map(ss).join(',') + ']'; return '{' + Object.keys(o).sort().map(function (x) { return JSON.stringify(x) + ':' + ss(o[x]); }).join(',') + '}'; }
+  function arr(x) { return Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.keys(x).map(function (i) { return x[i]; }) : []); }
+  function mapIn(x) { var o = {}; if (x && typeof x === 'object') Object.keys(x).forEach(function (i) { o[ufk(i)] = Number(x[i]) || 0; }); return o; }
+  function mapOut(x) { var o = {}; Object.keys(x).forEach(function (i) { o[fk(i)] = x[i]; }); return o; }
+  function getMeta() { try { var m = JSON.parse(localStorage.getItem(META_KEY) || 'null'); if (m && m.snap && m.m && m.del) return m; } catch (e) {} return null; }
+  function setMeta(m) { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch (e) {} }
+  /* এই ডিভাইসে কী বদলেছে ধরা: নতুন/বদলানো এন্ট্রিতে সময় বসে, মুছে ফেলা এন্ট্রিতে মোছার চিহ্ন বসে */
+  function track(l) {
+    if (!localOk()) return getMeta() || { snap: {}, m: {}, del: {} };
+    var meta = getMeta(), now = Date.now(), cur = {}, id;
+    nd(l.entries).forEach(function (e) { if (e && e.id != null) cur[kid(e)] = e; });
+    if (!meta) {
+      meta = { snap: {}, m: {}, del: {} };
+      for (id in cur) { meta.snap[id] = ss(cur[id]); meta.m[id] = Number(l.u) || 1; }
+      setMeta(meta); return meta;
+    }
+    for (id in cur) {
+      var js = ss(cur[id]);
+      if (meta.snap[id] !== js) { meta.snap[id] = js; meta.m[id] = now; delete meta.del[id]; }
+    }
+    for (id in meta.snap) if (!cur[id]) { meta.del[id] = now; delete meta.snap[id]; delete meta.m[id]; }
+    setMeta(meta); return meta;
   }
-  function pull() {
+  /* এই ডিভাইস + ক্লাউড = সবার এন্ট্রি মিলিয়ে একটা তালিকা (যার সময় নতুন সে জেতে, মোছার পরে নতুন এডিট না হলে এন্ট্রি বাদ) */
+  function mergeDocs(l, meta, cloud) {
+    var cu = cloud ? Number(cloud.u) || 0 : 0, cm = mapIn(cloud && cloud.m), cd = mapIn(cloud && cloud.del);
+    var le = {}, ce = {}, order = [], seen = {}, id;
+    nd(l.entries).forEach(function (e) { if (e && e.id != null) { le[kid(e)] = e; if (!seen[kid(e)]) { seen[kid(e)] = 1; order.push(kid(e)); } } });
+    nd(arr(cloud && cloud.entries)).forEach(function (e) { if (e && e.id != null) { ce[kid(e)] = e; if (!seen[kid(e)]) { seen[kid(e)] = 1; order.push(kid(e)); } } });
+    Object.keys(meta.del).concat(Object.keys(cd)).forEach(function (i) { if (!seen[i]) { seen[i] = 1; order.push(i); } });
+    var out = { entries: [], m: {}, del: {}, cm: {} }, cutoff = Date.now() - TOMB_MS;
+    order.forEach(function (i) {
+      var lm = le[i] ? (Number(meta.m[i]) || 1) : -1, rm = ce[i] ? (cm[i] != null ? cm[i] : cu) : -1;
+      var td = Math.max(Number(meta.del[i]) || 0, cd[i] || 0), wm = Math.max(lm, rm);
+      var ent = wm < 0 ? null : (lm >= rm ? le[i] : ce[i]);
+      if (ent && wm > td) { out.entries.push(ent); out.m[i] = wm; }
+      else if (td > cutoff) out.del[i] = td;
+      if (ce[i]) out.cm[i] = rm;
+    });
+    out.cloudSig = ss({ e: Object.keys(ce).sort().map(function (i) { return [i, ss(ce[i]), out.cm[i]]; }), d: cd });
+    out.sig = ss({ e: out.entries.map(function (e) { return [kid(e), ss(e), out.m[kid(e)]]; }).sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; }), d: out.del });
+    return out;
+  }
+  function localSig(l) { return ss(nd(l.entries).map(function (e) { return [kid(e), ss(e)]; })); }
+  /* mode: true = ক্লাউডের নতুন এন্ট্রি এই ডিভাইসেও বসাও (খরচ-উইন্ডো খোলার সময়); false = শুধু ক্লাউডে পাঠাও; 'auto' = উইন্ডো বন্ধ থাকলে বসাও */
+  function reconcile(mode) {
     var c = cfg(); if (!c) { status(''); return Promise.resolve(); }
-    status('☁️ ক্লাউড থেকে আনা হচ্ছে…');
+    if (!localOk()) { status('⚠️ এই ডিভাইসের ডেটা পড়া যায়নি — সিঙ্ক থামানো হয়েছে, কিছু মোছা হয়নি'); return Promise.resolve(); }
+    var l = getLocal(), meta = track(l), lsig = localSig(l);
+    status('☁️ সিঙ্ক হচ্ছে…');
     return req(ep(c), { method: 'GET', cache: 'no-store' }).then(function (cloud) {
-      var l = getLocal(), cu = cloud ? Number(cloud.u) || 0 : 0, ce = (cloud && Array.isArray(cloud.entries)) ? nd(cloud.entries) : [];
-      var lent = nd(l.entries), demo = l.entries.filter(isDemo);
-      if (cloud && cu && !l.u && lent.length) {
-        var seen = {}, all = [];
-        ce.concat(lent).forEach(function (e) { if (e && e.id != null && !seen[e.id]) { seen[e.id] = 1; all.push(e); } });
-        setLocal({ entries: all.concat(demo), u: Date.now() }); return push();
+      var r = mergeDocs(l, meta, cloud), apply = mode === true || (mode === 'auto' && !isOpen());
+      var jobs = Promise.resolve();
+      if (r.sig !== r.cloudSig && (r.entries.length || Object.keys(r.del).length || cloud)) {
+        var cu = cloud ? Number(cloud.u) || 0 : 0;
+        jobs = req(ep(c), { method: 'PUT', body: JSON.stringify({ u: Math.max(Date.now(), cu + 1), entries: r.entries, m: mapOut(r.m), del: mapOut(r.del) }) });
       }
-      if (cloud && cu > (l.u || 0)) { setLocal({ entries: ce.concat(demo), u: cu }); return; }
-      if (!cloud || (l.u || 0) > cu || (!cu && lent.length)) {
-        if (!l.u && lent.length) { l.u = Date.now(); setLocal(l); }
-        if (l.u || lent.length) return push();
-      }
-    }).then(function () { status('☁️ সিঙ্ক হয়েছে'); }, function () { status('⚠️ ক্লাউডে সংযোগ হয়নি — অফলাইনে চলছে'); });
+      return jobs.then(function () {
+        if (apply) {
+          var cur = getLocal(), demo = (cur.entries || []).filter(isDemo), snap = {};
+          if (localSig(cur) !== lsig) return;   /* অনুরোধ চলার সময় এখানে নতুন পরিবর্তন হয়েছে — পরের বারে মেলানো হবে */
+          r.entries.forEach(function (e) { snap[kid(e)] = ss(e); });
+          if (localSig(cur) !== ss(r.entries.map(function (e) { return [kid(e), ss(e)]; }))) { var nl = {}; Object.keys(cur).forEach(function (x) { nl[x] = cur[x]; }); nl.entries = r.entries.concat(demo); nl.u = Math.max(Number(cur.u) || 0, Number(cloud && cloud.u) || 0); setLocal(nl); }
+          setMeta({ snap: snap, m: r.m, del: r.del });
+        }
+      });
+    }).then(function () { retryN = 0; clearTimeout(retryT); status('☁️ সিঙ্ক হয়েছে'); }, function () {
+      status('⚠️ ক্লাউডে পাঠানো যায়নি — নিজে থেকে আবার চেষ্টা হবে');
+      clearTimeout(retryT); retryT = setTimeout(function () { enqueue('auto'); }, RETRY[Math.min(retryN++, RETRY.length - 1)]);
+    });
   }
+  function enqueue(mode) { syncQ = syncQ.then(function () { return reconcile(mode); }, function () { return reconcile(mode); }); return syncQ; }
+  function push() { return enqueue(false); }
+  function pull() { return enqueue(true); }
+  function flushNow() { clearTimeout(pushT); if (cfg()) enqueue('auto'); }
   window.__ashikurSaved = function () {
+    try { track(getLocal()); } catch (e) {}   /* সিঙ্ক বন্ধ থাকলেও পরিবর্তন লিখে রাখা হয়, পরে চালু করলে ঠিকমতো মিলবে */
     if (!cfg()) return;
     status('☁️ সেভ হচ্ছে…'); clearTimeout(pushT);
-    pushT = setTimeout(function () { push().then(function () { status('☁️ সিঙ্ক হয়েছে'); }, function () { status('⚠️ ক্লাউডে পাঠানো যায়নি — আবার সেভ করলে চেষ্টা হবে'); }); }, 700);
+    pushT = setTimeout(function () { enqueue(false); }, 700);
   };
+  try { track(getLocal()); } catch (e) {}
+  setTimeout(function () { if (cfg()) enqueue('auto'); }, 3000);
+  try { window.addEventListener('online', function () { flushNow(); }); } catch (e) {}
+  try { document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' || document.visibilityState === 'visible') flushNow(); }); } catch (e) {}
   /* ডেমো ডেটা: মূল পেজের “ডেমো ডেটা লোড/মুছুন” বাটনের সাথে চলে — ডেমো ক্লাউডে যায় না */
   var DEMO_ROWS = [[9,"in",40000,"বেতন থেকে সঞ্চয়"],[9,"out",3500,"বাসা ভাড়ার অংশ"],[8,"out",200,"অফিসের যাতায়াত"],[8,"out",160,"সকালের নাস্তা"],[7,"out",450,"দুপুরের খাবার"],[6,"out",1800,"মোবাইল ও ইন্টারনেট"],[5,"out",300,"পেট্রোল"],[4,"in",3000,"ফ্রিল্যান্স আয়"],[4,"out",2500,"জুতা কেনা"],[3,"out",600,"সেলুন"],[2,"out",850,"বন্ধুদের সাথে ডিনার"],[1,"out",250,"পেট্রোল"],[1,"out",120,"চা-নাস্তা"],[0,"out",200,"সকালের নাস্তা"],[0,"out",380,"দুপুরের খাবার"]], DP = 'asdemo-';
   function isDemo(e) { return !!e && String(e.id).indexOf(DP) === 0; }
@@ -8103,7 +8421,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   /* ফোনের ব্যাক বাটন: ভেতরের পপআপ ও খরচ-উইন্ডো একটা একটা করে বন্ধ হয় */
   function layerPush(k) { try { history.pushState({ asExp: k }, ''); layers.push(k); } catch (e) {} }
   function toFrame(m) { try { if (frame && frame.contentWindow) frame.contentWindow.postMessage(m, '*'); } catch (e) {} }
-  function hideOv() { ov.classList.remove('show'); document.body.style.overflow = ''; }
+  function hideOv() { ov.classList.remove('show'); document.body.style.overflow = ''; try { flushNow(); } catch (e) {} }
   window.addEventListener('message', function (ev) {
     var d = ev.data;
     if (!d || !frame || ev.source !== frame.contentWindow || !d.sfDlg) return;
@@ -8224,7 +8542,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   function cfg() { try { var o = JSON.parse(localStorage.getItem('safwanTreatsSync_v1') || '{}'); return (o && o.on && o.url && o.code) ? o : null; } catch (e) { return null; } }
   function ep(c) { return c.url.replace(/\/+$/, '') + '/safwanTreats/' + encodeURIComponent(c.code) + '/bazaar.json'; }
   function bstat(k) {
-    var en = isEn(), M = { pull: ['☁️ ক্লাউড থেকে আনা হচ্ছে…', '☁️ Loading from cloud…'], save: ['☁️ সেভ হচ্ছে…', '☁️ Saving…'], ok: ['☁️ সিঙ্ক হয়েছে', '☁️ Synced'], err: ['⚠️ সিঙ্ক হয়নি — আবার সেভ করলে চেষ্টা হবে', '⚠️ Sync failed — will retry on next save'] };
+    var en = isEn(), M = { pull: ['☁️ ক্লাউড থেকে আনা হচ্ছে…', '☁️ Loading from cloud…'], save: ['☁️ সেভ হচ্ছে…', '☁️ Saving…'], ok: ['☁️ সিঙ্ক হয়েছে', '☁️ Synced'], err: ['⚠️ সিঙ্ক হয়নি — নিজে থেকে আবার চেষ্টা হবে', '⚠️ Sync failed — will retry automatically'] };
     st.textContent = k ? M[k][en ? 1 : 0] : '';
   }
   function req(url, opt) {
@@ -8262,30 +8580,132 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     Object.keys(demos).forEach(function (k) { o[k] = (o[k] || []).concat(demos[k]); });
     bset(o); setU(u); lastSnap = localStorage.getItem('bazaar:v1');
   }
-  function push() {
-    var c = cfg(); if (!c) return Promise.resolve();
-    var u = getU() || Date.now(); setU(u);
-    return req(ep(c), { method: 'PUT', body: JSON.stringify({ u: u, data: noDemo(bget()) }) });
+  /* বাজার লিস্ট: প্রতিটি জিনিস = দিন + নাম + (একই নামের কত নম্বর) */
+  function toA(x) { return Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.keys(x).map(function (k) { return x[k]; }) : []); }
+  function bRecs(data) {
+    var out = [];
+    Object.keys(data || {}).forEach(function (day) {
+      var cnt = {};
+      toA(data[day]).forEach(function (it) {
+        if (!it || typeof it !== 'object' || it.name == null || it.demo) return;
+        var n = String(it.name), c = cnt[n] = (cnt[n] || 0) + 1, r = {};
+        Object.keys(it).forEach(function (x) { r[x] = it[x]; });
+        r._d = day; r._k = day + '|' + n + '|' + c; out.push(r);
+      });
+    });
+    return out;
   }
-  function pull() {
-    var c = cfg(); if (!c) { bstat(''); return Promise.resolve(); }
-    bstat('pull');
-    return req(ep(c), { method: 'GET', cache: 'no-store' }).then(function (cloud) {
-      var lu = getU(), cu = cloud ? Number(cloud.u) || 0 : 0, cd = (cloud && cloud.data && typeof cloud.data === 'object') ? cloud.data : null;
-      var local = noDemo(bget()), hasLocal = Object.keys(local).length > 0;
-      if (cd && Object.keys(cd).length && cu && !lu && hasLocal) { setAll(union(cd, local), Date.now()); return push(); }   /* প্রথমবার: দুই দিক মেলানো */
-      if (cloud && cu > lu) { setAll(cd || {}, cu); return; }                                                              /* ক্লাউডের ডেটা নতুন */
-      if (!cloud || lu > cu || (!cu && hasLocal)) {                                                                        /* এই ডিভাইসের ডেটা নতুন */
-        if (!lu && hasLocal) setU(Date.now());
-        if (getU() || hasLocal) return push();
+  function bData(list) {
+    var d = {};
+    list.forEach(function (r) { var o = {}; Object.keys(r).forEach(function (x) { if (x !== '_d' && x !== '_k') o[x] = r[x]; }); (d[r._d] = d[r._d] || []).push(o); });
+    return d;
+  }
+  var AD = {
+    key: 'bazaar', id: function (r) { return r._k; }, baseU: getU, cfg: cfg, ep: ep, req: req, stat: bstat,
+    open: function () { return ov.classList.contains('show'); },
+    ok: function () { try { var r = localStorage.getItem('bazaar:v1'); if (r == null || r === '') return true; var o = JSON.parse(r); return !!(o && typeof o === 'object' && !Array.isArray(o)); } catch (e) { return false; } },
+    localRecs: function () { return bRecs(bget()); },
+    docRecs: function (cloud) { return bRecs(cloud && cloud.data && typeof cloud.data === 'object' ? cloud.data : {}); },
+    docFields: function (list) { return { data: bData(list) }; },
+    apply: function (list) { setAll(bData(list), Date.now()); }
+  };
+  /* ---- ক্লাউড সিঙ্ক (নতুন): প্রতিটি আইটেম আলাদা করে মেলানো, মোছার চিহ্ন, নিজে থেকে আবার চেষ্টা ---- */
+  var SY = (function (AD) {
+    var META = AD.key + ':sync', TOMB_MS = 90 * 864e5, RETRY = [5000, 15000, 45000, 120000, 300000], retryN = 0, retryT = null, pushT = null, Q = Promise.resolve();
+    function ss(o) { if (o === null || typeof o !== 'object') return JSON.stringify(o); if (Array.isArray(o)) return '[' + o.map(ss).join(',') + ']'; return '{' + Object.keys(o).sort().map(function (x) { return JSON.stringify(x) + ':' + ss(o[x]); }).join(',') + '}'; }
+    function arr(x) { return Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.keys(x).map(function (i) { return x[i]; }) : []); }
+    function hash(s) { var a = 0x811c9dc5, b = 5381, i, c; for (i = 0; i < s.length; i++) { c = s.charCodeAt(i); a = Math.imul(a ^ c, 16777619) >>> 0; b = (Math.imul(b, 33) + c) >>> 0; } return a.toString(16) + b.toString(16); }
+    /* Firebase-এর কী-তে . $ # [ ] / চলে না এবং লম্বা হলে হয় না — তাই নিরাপদ কী বানানো */
+    function fk(s) {
+      s = String(s);
+      var k = s.replace(/[%.$#\[\]\/\u0000-\u001f\u007f]/g, function (c) { return '%' + ('0' + c.charCodeAt(0).toString(16).toUpperCase()).slice(-2); });
+      if (!k) k = '_';
+      if (unescape(encodeURIComponent(k)).length > 500) k = 'h~' + hash(s);
+      return k;
+    }
+    function kid(r) { return fk(AD.id(r)); }
+    function numMap(x) { var o = {}; if (x && typeof x === 'object') Object.keys(x).forEach(function (i) { o[i] = Number(x[i]) || 0; }); return o; }
+    function metaGet() { try { var m = JSON.parse(localStorage.getItem(META) || 'null'); if (m && m.snap && m.m && m.del) return m; } catch (e) {} return null; }
+    function metaSet(m) { try { localStorage.setItem(META, JSON.stringify(m)); } catch (e) {} }
+    function recSig(list) { return ss(list.map(function (r) { return [kid(r), ss(r)]; }).sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; })); }
+    /* এই ডিভাইসে কী বদলেছে ধরা: নতুন/বদলানো আইটেমে সময় বসে, মুছে ফেলা আইটেমে মোছার চিহ্ন বসে */
+    function track(recs) {
+      if (AD.ok && !AD.ok()) return metaGet() || { snap: {}, m: {}, del: {} };
+      var meta = metaGet(), now = Date.now(), cur = {}, id;
+      recs.forEach(function (r) { cur[kid(r)] = r; });
+      if (!meta) {
+        meta = { snap: {}, m: {}, del: {} };
+        for (id in cur) { meta.snap[id] = ss(cur[id]); meta.m[id] = Number(AD.baseM ? AD.baseM(cur[id]) : AD.baseU()) || 1; }
+        metaSet(meta); return meta;
       }
-    }).then(function () { bstat('ok'); }, function () { bstat('err'); });
-  }
-  function schedPush() {
-    if (!cfg()) return;
-    bstat('save'); clearTimeout(pushT);
-    pushT = setTimeout(function () { pushT = null; push().then(function () { bstat('ok'); }, function () { bstat('err'); }); }, 700);
-  }
+      for (id in cur) {
+        var js = ss(cur[id]);
+        if (meta.snap[id] !== js) { meta.snap[id] = js; meta.m[id] = now; delete meta.del[id]; }
+      }
+      for (id in meta.snap) if (!cur[id]) { meta.del[id] = now; delete meta.snap[id]; delete meta.m[id]; }
+      metaSet(meta); return meta;
+    }
+    function mergeDocs(recs, meta, cloud) {
+      var cu = cloud ? Number(cloud.u) || 0 : 0, cm = numMap(cloud && cloud.m), cd = numMap(cloud && cloud.del);
+      var le = {}, ce = {}, order = [], seen = {};
+      recs.forEach(function (r) { var k = kid(r); le[k] = r; if (!seen[k]) { seen[k] = 1; order.push(k); } });
+      AD.docRecs(cloud).forEach(function (r) { var k = kid(r); ce[k] = r; if (!seen[k]) { seen[k] = 1; order.push(k); } });
+      Object.keys(meta.del).concat(Object.keys(cd)).forEach(function (k) { if (!seen[k]) { seen[k] = 1; order.push(k); } });
+      var out = { list: [], m: {}, del: {}, cm: {} }, cutoff = Date.now() - TOMB_MS;
+      order.forEach(function (k) {
+        var lm = le[k] ? (Number(meta.m[k]) || 1) : -1;
+        var rm = ce[k] ? (cm[k] != null ? cm[k] : (Number(AD.baseM ? AD.baseM(ce[k]) : 0) || cu)) : -1;
+        var td = Math.max(Number(meta.del[k]) || 0, cd[k] || 0), wm = Math.max(lm, rm);
+        var rec = wm < 0 ? null : (lm >= rm ? le[k] : ce[k]);
+        if (rec && wm > td) { out.list.push(rec); out.m[k] = wm; }
+        else if (td > cutoff) out.del[k] = td;
+        if (ce[k]) out.cm[k] = rm;
+      });
+      out.cloudSig = ss({ e: Object.keys(ce).sort().map(function (k) { return [k, ss(ce[k]), out.cm[k]]; }), d: cd });
+      out.sig = ss({ e: out.list.map(function (r) { return [kid(r), ss(r), out.m[kid(r)]]; }).sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; }), d: out.del });
+      return out;
+    }
+    /* mode: true = ক্লাউডের নতুন আইটেম এই ডিভাইসেও বসাও (জানালা খোলার সময়); false = শুধু ক্লাউডে পাঠাও; 'auto' = জানালা বন্ধ থাকলে বসাও */
+    function reconcile(mode) {
+      var c = AD.cfg(); if (!c) { AD.stat(''); return Promise.resolve(); }
+      if (AD.ok && !AD.ok()) { AD.stat('err'); return Promise.resolve(); }
+      var recs = AD.localRecs(), meta = track(recs), lsig = recSig(recs);
+      AD.stat('pull');
+      return AD.req(AD.ep(c), { method: 'GET', cache: 'no-store' }).then(function (cloud) {
+        var r = mergeDocs(recs, meta, cloud), apply = mode === true || (mode === 'auto' && !AD.open());
+        var job = Promise.resolve();
+        if (r.sig !== r.cloudSig && (r.list.length || Object.keys(r.del).length || cloud)) {
+          var cu = cloud ? Number(cloud.u) || 0 : 0, body = AD.docFields(r.list);
+          body.u = Math.max(Date.now(), cu + 1); body.m = r.m; body.del = r.del;
+          job = AD.req(AD.ep(c), { method: 'PUT', body: JSON.stringify(body) });
+        }
+        return job.then(function () {
+          if (!apply) return;
+          var cur = AD.localRecs();
+          if (recSig(cur) !== lsig) return;   /* অনুরোধ চলার সময় এখানে নতুন পরিবর্তন হয়েছে — পরের বারে মেলানো হবে */
+          if (recSig(cur) !== recSig(r.list)) AD.apply(r.list);
+          var snap = {}; r.list.forEach(function (x) { snap[kid(x)] = ss(x); });
+          metaSet({ snap: snap, m: r.m, del: r.del });
+        });
+      }).then(function () { retryN = 0; clearTimeout(retryT); AD.stat('ok'); }, function () {
+        AD.stat('err');
+        clearTimeout(retryT); retryT = setTimeout(function () { enqueue('auto'); }, RETRY[Math.min(retryN++, RETRY.length - 1)]);
+      });
+    }
+    function enqueue(mode) { Q = Q.then(function () { return reconcile(mode); }, function () { return reconcile(mode); }); return Q; }
+    function sched() { if (!AD.cfg()) return; AD.stat('save'); clearTimeout(pushT); pushT = setTimeout(function () { pushT = null; enqueue(false); }, 700); }
+    function flush() { clearTimeout(pushT); pushT = null; if (AD.cfg()) enqueue('auto'); }
+    function changed() { try { track(AD.localRecs()); } catch (e) {} sched(); }   /* সিঙ্ক বন্ধ থাকলেও পরিবর্তন লিখে রাখা হয় */
+    try { track(AD.localRecs()); } catch (e) {}
+    setTimeout(function () { if (AD.cfg()) enqueue('auto'); }, 3000);
+    try { window.addEventListener('online', flush); } catch (e) {}
+    try { document.addEventListener('visibilitychange', flush); } catch (e) {}
+    return { enqueue: enqueue, flush: flush, changed: changed };
+  })(AD);
+  function push() { return SY.enqueue(false); }
+  function pull() { return SY.enqueue(true); }
+  function schedPush() { SY.changed(); }
+  window.__bazaarTouch = function () { SY.changed(); };
   /* ভেতরের পেজ বাজার ডেটা সেভ করলে ধরা (প্রতি ১.২ সেকেন্ডে মিলিয়ে দেখা) */
   function tick() {
     var snap = null; try { snap = localStorage.getItem('bazaar:v1'); } catch (e) {}
@@ -8310,7 +8730,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     applyLook(); startPoll();
     pull().then(function () { if (ov.classList.contains('show')) { build(); startPoll(); } });
   }
-  function hide() { ov.classList.remove('show'); document.body.style.overflow = ''; tick(); stopPoll(); if (pushT) { clearTimeout(pushT); pushT = null; push().then(function () { bstat('ok'); }, function () { bstat('err'); }); } }
+  function hide() { ov.classList.remove('show'); document.body.style.overflow = ''; tick(); stopPoll(); try { SY.flush(); } catch (e) {} }
   function closeIt() { hide(); if (pushed) { pushed = false; try { history.back(); } catch (e) {} } }
   window.addEventListener('popstate', function () { if (pushed && ov.classList.contains('show')) { pushed = false; hide(); } });
   applyLook();
@@ -8430,7 +8850,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   function cfg() { try { var o = JSON.parse(localStorage.getItem('safwanTreatsSync_v1') || '{}'); return (o && o.on && o.url && o.code) ? o : null; } catch (e) { return null; } }
   function ep(c) { return c.url.replace(/\/+$/, '') + '/safwanTreats/' + encodeURIComponent(c.code) + '/notes.json'; }
   function stat(k) {
-    var M = { pull: '☁️ ক্লাউড থেকে আনা হচ্ছে…', save: '☁️ সেভ হচ্ছে…', ok: '☁️ সিঙ্ক হয়েছে', err: '⚠️ সিঙ্ক হয়নি — আবার সেভ করলে চেষ্টা হবে' };
+    var M = { pull: '☁️ ক্লাউড থেকে আনা হচ্ছে…', save: '☁️ সেভ হচ্ছে…', ok: '☁️ সিঙ্ক হয়েছে', err: '⚠️ সিঙ্ক হয়নি — নিজে থেকে আবার চেষ্টা হবে' };
     $('npStat').textContent = k ? M[k] : '';
   }
   function req(url, opt) {
@@ -8440,39 +8860,113 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     return fetch(url, opt).then(function (r) { clearTimeout(to); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }, function (e) { clearTimeout(to); throw e; });
   }
   function real(a) { return (a || []).filter(function (n) { return n && n.id && !n.demo; }); }
-  function push() {
-    var c = cfg(); if (!c) return Promise.resolve();
-    var u = getU() || Date.now(); setU(u);
-    return req(ep(c), { method: 'PUT', body: JSON.stringify({ u: u, notes: real(notes) }) });
-  }
-  function schedPush() {
-    if (!cfg()) return;
-    stat('save'); clearTimeout(pushT);
-    pushT = setTimeout(function () { pushT = null; push().then(function () { stat('ok'); }, function () { stat('err'); }); }, 700);
-  }
-  function applyCloud(list, u) {
-    var demos = notes.filter(function (n) { return n && n.demo; });
-    notes = list.concat(demos);
-    try { localStorage.setItem(KEY, JSON.stringify(notes)); } catch (e) {}
-    setU(u);
-  }
-  function pull() {
-    var c = cfg(); if (!c) { stat(''); return Promise.resolve(); }
-    stat('pull');
-    return req(ep(c), { method: 'GET', cache: 'no-store' }).then(function (cloud) {
-      load();
-      var lu = getU(), cu = cloud ? Number(cloud.u) || 0 : 0, cn = real(cloud && Array.isArray(cloud.notes) ? cloud.notes : []), local = real(notes);
-      if (cn.length && cu && !lu && local.length) {   /* প্রথমবার: দুই দিক মেলানো (একই নোট হলে নতুনটি থাকে) */
-        var m = {}; cn.concat(local).forEach(function (n) { if (!m[n.id] || (n.upd || 0) > (m[n.id].upd || 0)) m[n.id] = n; });
-        applyCloud(Object.keys(m).map(function (k) { return m[k]; }), Date.now()); return push();
+  function nAll() { try { var a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  var AD = {
+    key: 'notes', id: function (n) { return n.id; }, baseM: function (n) { return n.upd; }, baseU: getU, cfg: cfg, ep: ep, req: req, stat: stat,
+    open: function () { return $('npOverlay').classList.contains('show'); },
+    ok: function () { try { var r = localStorage.getItem(KEY); if (r == null || r === '') return true; return Array.isArray(JSON.parse(r)); } catch (e) { return false; } },
+    localRecs: function () { return real(nAll()); },
+    docRecs: function (cloud) { var x = cloud && cloud.notes; return real(Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.keys(x).map(function (k) { return x[k]; }) : [])); },
+    docFields: function (list) { return { notes: list }; },
+    apply: function (list) { var demos = nAll().filter(function (n) { return n && n.demo; }); notes = list.concat(demos); try { localStorage.setItem(KEY, JSON.stringify(notes)); } catch (e) {} setU(Date.now()); }
+  };
+  /* ---- ক্লাউড সিঙ্ক (নতুন): প্রতিটি আইটেম আলাদা করে মেলানো, মোছার চিহ্ন, নিজে থেকে আবার চেষ্টা ---- */
+  var SY = (function (AD) {
+    var META = AD.key + ':sync', TOMB_MS = 90 * 864e5, RETRY = [5000, 15000, 45000, 120000, 300000], retryN = 0, retryT = null, pushT = null, Q = Promise.resolve();
+    function ss(o) { if (o === null || typeof o !== 'object') return JSON.stringify(o); if (Array.isArray(o)) return '[' + o.map(ss).join(',') + ']'; return '{' + Object.keys(o).sort().map(function (x) { return JSON.stringify(x) + ':' + ss(o[x]); }).join(',') + '}'; }
+    function arr(x) { return Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.keys(x).map(function (i) { return x[i]; }) : []); }
+    function hash(s) { var a = 0x811c9dc5, b = 5381, i, c; for (i = 0; i < s.length; i++) { c = s.charCodeAt(i); a = Math.imul(a ^ c, 16777619) >>> 0; b = (Math.imul(b, 33) + c) >>> 0; } return a.toString(16) + b.toString(16); }
+    /* Firebase-এর কী-তে . $ # [ ] / চলে না এবং লম্বা হলে হয় না — তাই নিরাপদ কী বানানো */
+    function fk(s) {
+      s = String(s);
+      var k = s.replace(/[%.$#\[\]\/\u0000-\u001f\u007f]/g, function (c) { return '%' + ('0' + c.charCodeAt(0).toString(16).toUpperCase()).slice(-2); });
+      if (!k) k = '_';
+      if (unescape(encodeURIComponent(k)).length > 500) k = 'h~' + hash(s);
+      return k;
+    }
+    function kid(r) { return fk(AD.id(r)); }
+    function numMap(x) { var o = {}; if (x && typeof x === 'object') Object.keys(x).forEach(function (i) { o[i] = Number(x[i]) || 0; }); return o; }
+    function metaGet() { try { var m = JSON.parse(localStorage.getItem(META) || 'null'); if (m && m.snap && m.m && m.del) return m; } catch (e) {} return null; }
+    function metaSet(m) { try { localStorage.setItem(META, JSON.stringify(m)); } catch (e) {} }
+    function recSig(list) { return ss(list.map(function (r) { return [kid(r), ss(r)]; }).sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; })); }
+    /* এই ডিভাইসে কী বদলেছে ধরা: নতুন/বদলানো আইটেমে সময় বসে, মুছে ফেলা আইটেমে মোছার চিহ্ন বসে */
+    function track(recs) {
+      if (AD.ok && !AD.ok()) return metaGet() || { snap: {}, m: {}, del: {} };
+      var meta = metaGet(), now = Date.now(), cur = {}, id;
+      recs.forEach(function (r) { cur[kid(r)] = r; });
+      if (!meta) {
+        meta = { snap: {}, m: {}, del: {} };
+        for (id in cur) { meta.snap[id] = ss(cur[id]); meta.m[id] = Number(AD.baseM ? AD.baseM(cur[id]) : AD.baseU()) || 1; }
+        metaSet(meta); return meta;
       }
-      if (cloud && cu > lu) { applyCloud(cn, cu); return; }
-      if (!cloud || lu > cu || (!cu && local.length)) {
-        if (!lu && local.length) setU(Date.now());
-        if (getU() || local.length) return push();
+      for (id in cur) {
+        var js = ss(cur[id]);
+        if (meta.snap[id] !== js) { meta.snap[id] = js; meta.m[id] = now; delete meta.del[id]; }
       }
-    }).then(function () { stat('ok'); }, function () { stat('err'); });
-  }
+      for (id in meta.snap) if (!cur[id]) { meta.del[id] = now; delete meta.snap[id]; delete meta.m[id]; }
+      metaSet(meta); return meta;
+    }
+    function mergeDocs(recs, meta, cloud) {
+      var cu = cloud ? Number(cloud.u) || 0 : 0, cm = numMap(cloud && cloud.m), cd = numMap(cloud && cloud.del);
+      var le = {}, ce = {}, order = [], seen = {};
+      recs.forEach(function (r) { var k = kid(r); le[k] = r; if (!seen[k]) { seen[k] = 1; order.push(k); } });
+      AD.docRecs(cloud).forEach(function (r) { var k = kid(r); ce[k] = r; if (!seen[k]) { seen[k] = 1; order.push(k); } });
+      Object.keys(meta.del).concat(Object.keys(cd)).forEach(function (k) { if (!seen[k]) { seen[k] = 1; order.push(k); } });
+      var out = { list: [], m: {}, del: {}, cm: {} }, cutoff = Date.now() - TOMB_MS;
+      order.forEach(function (k) {
+        var lm = le[k] ? (Number(meta.m[k]) || 1) : -1;
+        var rm = ce[k] ? (cm[k] != null ? cm[k] : (Number(AD.baseM ? AD.baseM(ce[k]) : 0) || cu)) : -1;
+        var td = Math.max(Number(meta.del[k]) || 0, cd[k] || 0), wm = Math.max(lm, rm);
+        var rec = wm < 0 ? null : (lm >= rm ? le[k] : ce[k]);
+        if (rec && wm > td) { out.list.push(rec); out.m[k] = wm; }
+        else if (td > cutoff) out.del[k] = td;
+        if (ce[k]) out.cm[k] = rm;
+      });
+      out.cloudSig = ss({ e: Object.keys(ce).sort().map(function (k) { return [k, ss(ce[k]), out.cm[k]]; }), d: cd });
+      out.sig = ss({ e: out.list.map(function (r) { return [kid(r), ss(r), out.m[kid(r)]]; }).sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; }), d: out.del });
+      return out;
+    }
+    /* mode: true = ক্লাউডের নতুন আইটেম এই ডিভাইসেও বসাও (জানালা খোলার সময়); false = শুধু ক্লাউডে পাঠাও; 'auto' = জানালা বন্ধ থাকলে বসাও */
+    function reconcile(mode) {
+      var c = AD.cfg(); if (!c) { AD.stat(''); return Promise.resolve(); }
+      if (AD.ok && !AD.ok()) { AD.stat('err'); return Promise.resolve(); }
+      var recs = AD.localRecs(), meta = track(recs), lsig = recSig(recs);
+      AD.stat('pull');
+      return AD.req(AD.ep(c), { method: 'GET', cache: 'no-store' }).then(function (cloud) {
+        var r = mergeDocs(recs, meta, cloud), apply = mode === true || (mode === 'auto' && !AD.open());
+        var job = Promise.resolve();
+        if (r.sig !== r.cloudSig && (r.list.length || Object.keys(r.del).length || cloud)) {
+          var cu = cloud ? Number(cloud.u) || 0 : 0, body = AD.docFields(r.list);
+          body.u = Math.max(Date.now(), cu + 1); body.m = r.m; body.del = r.del;
+          job = AD.req(AD.ep(c), { method: 'PUT', body: JSON.stringify(body) });
+        }
+        return job.then(function () {
+          if (!apply) return;
+          var cur = AD.localRecs();
+          if (recSig(cur) !== lsig) return;   /* অনুরোধ চলার সময় এখানে নতুন পরিবর্তন হয়েছে — পরের বারে মেলানো হবে */
+          if (recSig(cur) !== recSig(r.list)) AD.apply(r.list);
+          var snap = {}; r.list.forEach(function (x) { snap[kid(x)] = ss(x); });
+          metaSet({ snap: snap, m: r.m, del: r.del });
+        });
+      }).then(function () { retryN = 0; clearTimeout(retryT); AD.stat('ok'); }, function () {
+        AD.stat('err');
+        clearTimeout(retryT); retryT = setTimeout(function () { enqueue('auto'); }, RETRY[Math.min(retryN++, RETRY.length - 1)]);
+      });
+    }
+    function enqueue(mode) { Q = Q.then(function () { return reconcile(mode); }, function () { return reconcile(mode); }); return Q; }
+    function sched() { if (!AD.cfg()) return; AD.stat('save'); clearTimeout(pushT); pushT = setTimeout(function () { pushT = null; enqueue(false); }, 700); }
+    function flush() { clearTimeout(pushT); pushT = null; if (AD.cfg()) enqueue('auto'); }
+    function changed() { try { track(AD.localRecs()); } catch (e) {} sched(); }   /* সিঙ্ক বন্ধ থাকলেও পরিবর্তন লিখে রাখা হয় */
+    try { track(AD.localRecs()); } catch (e) {}
+    setTimeout(function () { if (AD.cfg()) enqueue('auto'); }, 3000);
+    try { window.addEventListener('online', flush); } catch (e) {}
+    try { document.addEventListener('visibilitychange', flush); } catch (e) {}
+    return { enqueue: enqueue, flush: flush, changed: changed };
+  })(AD);
+  function push() { return SY.enqueue(false); }
+  function pull() { return SY.enqueue(true); }
+  function schedPush() { SY.changed(); }
+  window.__notesTouch = function () { SY.changed(); };
   function show() {
     pushH(); load(); $('npOverlay').classList.add('show'); cur = null; $('npEdit').hidden = true; $('npPick').hidden = false; $('npSearch').value = ''; renderList();
     pull().then(function () { if (cur && !find(cur)) { cur = null; $('npEdit').hidden = true; $('npPick').hidden = false; } renderList(); });
@@ -8496,7 +8990,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     if (edH) { edH = false; cur = null; $('npEdit').hidden = true; $('npPick').hidden = false; renderList(); }
     else { hp = 0; hide(); }
   });
-  function hide() { $('npOverlay').classList.remove('show'); if (pushT) { clearTimeout(pushT); pushT = null; push().then(function () { stat('ok'); }, function () { stat('err'); }); } }
+  function hide() { $('npOverlay').classList.remove('show'); try { SY.flush(); } catch (e) {} }
   $('notePadBtn').onclick = show; $('npClose').onclick = closeIt;
   $('npBack').onclick = closeEditor;
   $('npFab').onclick = function () { $('npNew').onclick(); };
