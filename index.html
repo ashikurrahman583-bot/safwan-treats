@@ -885,6 +885,7 @@
   .sd-grp>summary small{color:var(--muted);font-weight:400;display:block}
   .sd-grp .sd-list{padding:0 10px 10px}
   .sd-grp .sd-track{margin:0 12px 10px}
+  .sd-tbl .sd-dedit-td{text-align:right;white-space:nowrap}.sd-tbl .sd-dedit{margin:0;padding:4px 10px;font-size:.78rem}
   .sd-tbl .sd-day{cursor:pointer}
   .sd-tbl .sd-day{transition:background .15s,color .15s;-webkit-tap-highlight-color:rgba(176,30,104,.35)}
   .sd-tbl .sd-day:hover,.sd-tbl .sd-day:active,.sd-tbl .sd-day.on{background:#c2185b}
@@ -1960,6 +1961,22 @@
     <h2 id="askTitle"></h2>
     <p id="askInfo"></p>
     <div class="modal-actions" id="askBtns"></div>
+  </div>
+</div>
+<div class="modal" id="dayEditModal" style="z-index:200;">
+  <div class="modal-box">
+    <h2>✏️ তারিখ ও বার বদলান</h2>
+    <p id="deInfo" style="margin:6px 0 10px;"></p>
+    <label class="f" for="deDate">তারিখ</label>
+    <input type="date" id="deDate" style="width:100%;margin:6px 0 10px;">
+    <label class="f" for="deWd">বার</label>
+    <select id="deWd" style="width:100%;margin:6px 0 4px;"></select>
+    <div class="hint" style="margin:2px 0 8px;">বার বদলালে একই সপ্তাহের (শনি–শুক্র) সেই বারের তারিখ ধরা হবে। তারিখ বদলালে বার নিজে থেকে মিলে যাবে।</div>
+    <div id="deMsg" style="min-height:1.2em;color:var(--red,#dc2626);font-weight:700;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" id="deSave">💾 সংরক্ষণ</button>
+      <button type="button" class="btn btn-cancel" id="deCancel">বাতিল</button>
+    </div>
   </div>
 </div>
 <div class="modal" id="waiveModal">
@@ -6070,11 +6087,12 @@
       var g = map[k], t = 0;
       g.forEach(function (e) { t += e.amount; });
       grand += t; cnt += g.length;
-      return '<tr class="sd-day"><td>' + escapeHtml(k) + '</td><td>' + WD[dow(k)] + '</td><td>' + g.length + '</td><td class="amt ' + tc + '">' + fmt(t) + '</td></tr>' +
-        '<tr class="sd-det" style="display:none"><td colspan="4">' + entryRows(sortG(g), false) + '</td></tr>';
+      return '<tr class="sd-day"><td>' + escapeHtml(k) + '</td><td>' + WD[dow(k)] + '</td><td>' + g.length + '</td><td class="amt ' + tc + '">' + fmt(t) + '</td>' +
+        '<td class="sd-dedit-td"><button type="button" class="row-btn edit sd-dedit" data-act="dayedit" data-date="' + escapeHtml(k) + '" data-kind="' + kind + '">✏️ Edit</button></td></tr>' +
+        '<tr class="sd-det" style="display:none"><td colspan="5">' + entryRows(sortG(g), false) + '</td></tr>';
     }).join('');
-    return grpTable('<th>তারিখ</th><th>বার</th><th>এন্ট্রি</th><th>মোট</th>', rows,
-      '<tr><th colspan="2">সর্বমোট (' + keys.length + ' দিন)</th><th>' + cnt + '</th><th class="' + tc + '">' + fmt(grand) + '</th></tr>', tc);
+    return grpTable('<th>তারিখ</th><th>বার</th><th>এন্ট্রি</th><th>মোট</th><th></th>', rows,
+      '<tr><th colspan="2">সর্বমোট (' + keys.length + ' দিন)</th><th>' + cnt + '</th><th class="' + tc + '">' + fmt(grand) + '</th><th></th></tr>', tc);
   }
   function wdGroups(items, kind) {
     var tc = kind === 'income' ? 'income-text' : 'expense-text', by = {}, grand = 0, cnt = 0, nd = 0;
@@ -6219,7 +6237,61 @@
     var b = ev.target.closest('.ochip');
     if (b) { statView = b.getAttribute('data-v'); renderStat(); $('statBody').scrollTop = 0; }
   });
+  /* ---- তারিখের লাইনে Edit: ওই তারিখের সব এন্ট্রির তারিখ/বার বদলানো ---- */
+  var deState = null;
+  function deIso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function deValid(v) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v || '')) return false;
+    var d = dateParts(v); return deIso(d) === v;
+  }
+  function deItems() {
+    return entries.filter(function (e) { return e.date === deState.date && e.type === deState.kind; });
+  }
+  function openDayEdit(date, kind) {
+    deState = { date: date, kind: kind };
+    var items = deItems(), sum = 0;
+    items.forEach(function (e) { sum += e.amount; });
+    $('deInfo').innerHTML = '<b>' + esc(date) + '</b> (' + WD[dow(date)] + ') — ' + items.length + 'টি ' + (kind === 'income' ? 'আয়' : 'খরচ') + ' এন্ট্রি, মোট ' + fmt(sum) + '<br><small>এই তারিখের সব এন্ট্রির তারিখ একসাথে বদলাবে।</small>';
+    $('deDate').value = date;
+    $('deWd').innerHTML = WD_ORDER.map(function (d) { return '<option value="' + d + '">' + WD[d] + '</option>'; }).join('');
+    $('deWd').value = String(dow(date));
+    $('deMsg').textContent = '';
+    $('dayEditModal').className = 'modal show';
+  }
+  function closeDayEdit() { $('dayEditModal').className = 'modal'; deState = null; }
+  $('deDate').addEventListener('change', function () {
+    if (deValid(this.value)) $('deWd').value = String(dow(this.value));
+    $('deMsg').textContent = '';
+  });
+  $('deWd').addEventListener('change', function () {
+    var cur = $('deDate').value;
+    if (!deValid(cur)) cur = deState.date;
+    var d = dateParts(cur), diff = WD_ORDER.indexOf(+this.value) - WD_ORDER.indexOf(d.getDay());
+    d.setDate(d.getDate() + diff);
+    $('deDate').value = deIso(d);
+    $('deMsg').textContent = '';
+  });
+  function saveDayEdit() {
+    if (!deState) return;
+    var nd = $('deDate').value;
+    if (!deValid(nd)) { $('deMsg').textContent = 'সঠিক তারিখ দিন।'; return; }
+    if (nd === deState.date) { closeDayEdit(); toast('কোনো পরিবর্তন হয়নি'); return; }
+    if (!futureOk(nd, saveDayEdit)) return;
+    var items = deItems(), now = Date.now();
+    items.forEach(function (e) { e.date = nd; e.u = Math.max(now, (Number(e.u) || 0) + 1); });
+    closeDayEdit();
+    afterDataChange();          /* লোকাল সেভ + ক্লাউড সিঙ্ক শিডিউল; ব্যাকআপ (JSON/CSV) এই নতুন তারিখই নেবে */
+    refreshStatKeep();
+    toast('✅ ' + items.length + 'টি এন্ট্রির তারিখ বদলে ' + nd + ' (' + WD[dow(nd)] + ') হয়েছে');
+  }
+  $('deSave').addEventListener('click', saveDayEdit);
+  $('deCancel').addEventListener('click', closeDayEdit);
+  $('dayEditModal').addEventListener('click', function (e) { if (e.target === this) closeDayEdit(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('dayEditModal').className.indexOf('show') >= 0) closeDayEdit(); });
+
   $('statBody').addEventListener('click', function (ev) {
+    var de = ev.target.closest('button[data-act="dayedit"]');
+    if (de) { ev.stopPropagation(); openDayEdit(de.getAttribute('data-date'), de.getAttribute('data-kind')); return; }
     if (ev.target.closest('button[data-act="edit"]')) { closeStat(); return; }
     if (ev.target.closest('button[data-act="del"]')) { refreshStatKeep(); return; }
     var tr = ev.target.closest('tr.sd-day');
