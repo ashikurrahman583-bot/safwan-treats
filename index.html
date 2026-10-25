@@ -1623,7 +1623,7 @@
       <h2 id="incomeFormTitle">💰 নতুন আয় / বিক্রি যোগ করুন</h2>
       <div class="form-grid">
         <input type="text" id="incomeDesc" class="full" placeholder="বিক্রির বিবরণ (যেমন: চকলেট কেক ১ পাউন্ড)" autocomplete="off">
-        <input type="date" id="incomeDate">
+        <div class="dwrap"><input type="date" id="incomeDate"><small class="dwd" id="incomeWd"></small></div>
         <input type="text" id="incomeAmount" placeholder="টাকা (৫০০ বা 500)" inputmode="decimal" autocomplete="off">
         <select id="incomeCat" class="full" aria-label="ক্যাটাগরি"></select>
       </div>
@@ -1638,7 +1638,7 @@
       <div class="exp-head"><h2 id="expenseFormTitle">🧾 নতুন খরচ যোগ করুন</h2><button type="button" class="btn" id="expenseTotalBtn" style="background:linear-gradient(135deg,#7c2d12,#ea580c);color:#fff;">💸 মোট খরচ</button></div>
       <div class="form-grid">
         <input type="text" id="expenseDesc" class="full" placeholder="খরচের বিবরণ (যেমন: ময়দা, ডিম, প্যাকেট)" autocomplete="off">
-        <input type="date" id="expenseDate">
+        <div class="dwrap"><input type="date" id="expenseDate"><small class="dwd" id="expenseWd"></small></div>
         <input type="text" id="expenseAmount" placeholder="টাকা (৫০০ বা 500)" inputmode="decimal" autocomplete="off">
         <select id="expenseCat" class="full" aria-label="ক্যাটাগরি"></select>
         <div class="memo-box">
@@ -1976,6 +1976,19 @@
     <div class="modal-actions">
       <button type="button" class="btn btn-primary" id="deSave">💾 সংরক্ষণ</button>
       <button type="button" class="btn btn-cancel" id="deCancel">বাতিল</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="wdEditModal" style="z-index:200;">
+  <div class="modal-box">
+    <h2>✏️ বার বদলান</h2>
+    <p id="wdeInfo" style="margin:6px 0 10px;"></p>
+    <label class="f" for="wdeSel">নতুন বার</label>
+    <select id="wdeSel" style="width:100%;margin:6px 0 8px;"></select>
+    <div id="wdeMsg" style="min-height:1.2em;color:var(--red,#dc2626);font-weight:700;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" id="wdeSave">💾 সংরক্ষণ</button>
+      <button type="button" class="btn btn-cancel" id="wdeCancel">বাতিল</button>
     </div>
   </div>
 </div>
@@ -3457,11 +3470,12 @@
     }
     if (svX.length) { /* সঞ্চয়: জমা ও উত্তোলন */
       lines.push('');
-      lines.push(['সঞ্চয় (Savings)', 'তারিখ (Date)', 'নোট (Note)', '', 'টাকা (Amount)'].map(csvCell).join(','));
+      lines.push(['সঞ্চয় (Savings)', 'তারিখ (Date)', 'নোট (Note)', 'বার (Weekday)', 'টাকা (Amount)'].map(csvCell).join(','));
       var sDep = 0, sWd = 0;
       svX.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id; }).forEach(function (x) {
         if (x.type === 'w') sWd += x.amount; else sDep += x.amount;
-        lines.push([x.type === 'w' ? 'সঞ্চয় উত্তোলন' : 'সঞ্চয় জমা', x.date, x.note, '', x.amount].map(csvCell).join(','));
+        var svWdN = ['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'], svP = String(x.date).split('-'), svWd = (svP.length === 3 && !isNaN(new Date(+svP[0], +svP[1] - 1, +svP[2]))) ? svWdN[new Date(+svP[0], +svP[1] - 1, +svP[2]).getDay()] : '';
+        lines.push([x.type === 'w' ? 'সঞ্চয় উত্তোলন' : 'সঞ্চয় জমা', x.date, x.note, svWd, x.amount].map(csvCell).join(','));
       });
       lines.push(['', '', 'মোট জমা (Total Deposit)', '', sDep].map(csvCell).join(','));
       lines.push(['', '', 'মোট উত্তোলন (Total Withdrawal)', '', sWd].map(csvCell).join(','));
@@ -6105,7 +6119,7 @@
       g.forEach(function (e) { t += e.amount; days[e.date] = 1; });
       var n = Object.keys(days).length;
       grand += t; cnt += g.length; nd += n;
-      return '<tr class="sd-day"><td>' + WD[d] + '</td><td>' + n + '</td><td>' + g.length + '</td><td class="amt ' + tc + '">' + fmt(t) + '</td><td>' + fmt(t / n) + '</td></tr>' +
+      return '<tr class="sd-day"><td>' + WD[d] + ' <button type="button" class="row-btn edit sd-dedit" data-act="wdedit" data-wd="' + d + '" data-kind="' + kind + '" title="বার Edit">✏️</button></td><td>' + n + '</td><td>' + g.length + '</td><td class="amt ' + tc + '">' + fmt(t) + '</td><td>' + fmt(t / n) + '</td></tr>' +
         '<tr class="sd-det" style="display:none"><td colspan="5">' + entryRows(sortG(g), false) + '</td></tr>';
     }).join('');
     return grpTable('<th>বার</th><th>দিন</th><th>এন্ট্রি</th><th>মোট</th><th>গড়/দিন</th>', rows,
@@ -6113,6 +6127,12 @@
   }
   function renderStat() {
     var list = statList(), kind = statKind, h = '';
+    var DAYV = { today: 0, yest: 1, dby: 2 }, DAYT = { today: 'আজ', yest: 'গত কাল', dby: 'গত পরশু' }, dayStr = '';
+    if (kind !== 'net' && DAYV[statView] !== undefined) {
+      var dd0 = new Date(); dd0.setHours(12, 0, 0, 0); dd0.setDate(dd0.getDate() - DAYV[statView]);
+      dayStr = deIso(dd0);
+      list = entries.filter(function (e) { return e.date === dayStr; });
+    }
     $('statTitle').textContent = STAT_TITLE[kind];
     $('statChips').innerHTML = STAT_PERS.map(function (c) {
       return '<button type="button" class="ochip' + (statPer === c[0] ? ' on' : '') + '" data-p="' + c[0] + '">' + c[1] + '</button>';
@@ -6127,7 +6147,7 @@
     }
     else {
       sv.style.display = '';
-      sv.innerHTML = [['all', '📋 ক্যাটাগরি ও সব এন্ট্রি'], ['date', '📅 তারিখ অনুযায়ী'], ['wd', '🗓️ বার অনুযায়ী']].map(function (c) {
+      sv.innerHTML = [['all', '📋 ক্যাটাগরি ও সব এন্ট্রি'], ['date', '📅 তারিখ অনুযায়ী'], ['today', '☀️ আজ'], ['yest', '🕘 গত কাল'], ['dby', '📆 গত পরশু']].map(function (c) {
         return '<button type="button" class="ochip' + (statView === c[0] ? ' on' : '') + '" data-v="' + c[0] + '">' + c[1] + '</button>';
       }).join('');
     }
@@ -6189,7 +6209,10 @@
       h += '<div class="sd-stats">' + statCard('মোট', fmt(total), tc) + statCard('এন্ট্রি', items.length + 'টি') +
         statCard('গড় প্রতি এন্ট্রি', items.length ? fmt(total / items.length) : '—') + statCard('সবচেয়ে বড়', items.length ? fmt(big) : '—') + '</div>';
       if (statView === 'date') h += '<h3 class="sd-h">📅 তারিখ অনুযায়ী</h3>' + dayGroups(items, kind);
-      else if (statView === 'wd') h += '<h3 class="sd-h">🗓️ বার অনুযায়ী</h3>' + wdGroups(items, kind);
+      else if (dayStr) {
+        h += '<h3 class="sd-h">📅 ' + DAYT[statView] + ' — ' + escapeHtml(dayStr) + ' (' + WD[dow(dayStr)] + ') · ' + items.length + 'টি এন্ট্রি</h3>';
+        h += items.length ? entryRows(sortG(items), false) : '<div class="empty">' + DAYT[statView] + 'র কোনো এন্ট্রি নেই</div>';
+      }
       else {
       h += '<h3 class="sd-h">🏷️ ক্যাটাগরি অনুযায়ী</h3>' + catBars(list, kind);
       h += '<h3 class="sd-h">📋 সব এন্ট্রি (' + items.length + ')</h3>';
@@ -6286,10 +6309,49 @@
   }
   $('deSave').addEventListener('click', saveDayEdit);
   $('deCancel').addEventListener('click', closeDayEdit);
+
+  /* ---- বারের লাইনে Edit: ওই বারের সব এন্ট্রি অন্য বারে সরানো (একই সপ্তাহের ভেতরে) ---- */
+  var wdState = null;
+  function wdItems() {
+    return statList().filter(function (e) { return e.type === wdState.kind && dow(e.date) === wdState.wd; });
+  }
+  function openWdEdit(wd, kind) {
+    wdState = { wd: wd, kind: kind };
+    var items = wdItems(), sum = 0, days = {};
+    items.forEach(function (e) { sum += e.amount; days[e.date] = 1; });
+    $('wdeInfo').innerHTML = '<b>' + WD[wd] + '</b> — ' + Object.keys(days).length + ' দিন, ' + items.length + 'টি ' + (kind === 'income' ? 'আয়' : 'খরচ') + ' এন্ট্রি, মোট ' + fmt(sum) + '<br><small>এই বারের সব এন্ট্রি নতুন বারে সরবে। প্রতিটি এন্ট্রির তারিখ একই সপ্তাহের (শনি–শুক্র) নতুন বারের তারিখে বদলাবে।</small>';
+    $('wdeSel').innerHTML = WD_ORDER.map(function (d) { return '<option value="' + d + '">' + WD[d] + '</option>'; }).join('');
+    $('wdeSel').value = String(wd);
+    $('wdeMsg').textContent = '';
+    $('wdEditModal').className = 'modal show';
+  }
+  function closeWdEdit() { $('wdEditModal').className = 'modal'; wdState = null; }
+  function saveWdEdit() {
+    if (!wdState) return;
+    var nw = +$('wdeSel').value;
+    if (nw === wdState.wd) { closeWdEdit(); toast('কোনো পরিবর্তন হয়নি'); return; }
+    var items = wdItems(), diff = WD_ORDER.indexOf(nw) - WD_ORDER.indexOf(wdState.wd), maxD = '', moves = [];
+    items.forEach(function (e) {
+      var d = dateParts(e.date); d.setDate(d.getDate() + diff);
+      var nd = deIso(d); moves.push([e, nd]); if (nd > maxD) maxD = nd;
+    });
+    if (maxD && !futureOk(maxD, saveWdEdit)) return;
+    var now = Date.now();
+    moves.forEach(function (m) { m[0].date = m[1]; m[0].u = Math.max(now, (Number(m[0].u) || 0) + 1); });
+    closeWdEdit();
+    afterDataChange();
+    refreshStatKeep();
+    toast('✅ ' + items.length + 'টি এন্ট্রি ' + WD[nw] + '-এ সরানো হয়েছে');
+  }
+  $('wdeSave').addEventListener('click', saveWdEdit);
+  $('wdeCancel').addEventListener('click', closeWdEdit);
+  $('wdEditModal').addEventListener('click', function (e) { if (e.target === this) closeWdEdit(); });
   $('dayEditModal').addEventListener('click', function (e) { if (e.target === this) closeDayEdit(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('dayEditModal').className.indexOf('show') >= 0) closeDayEdit(); });
 
   $('statBody').addEventListener('click', function (ev) {
+    var we = ev.target.closest('button[data-act="wdedit"]');
+    if (we) { ev.stopPropagation(); openWdEdit(+we.getAttribute('data-wd'), we.getAttribute('data-kind')); return; }
     var de = ev.target.closest('button[data-act="dayedit"]');
     if (de) { ev.stopPropagation(); openDayEdit(de.getAttribute('data-date'), de.getAttribute('data-kind')); return; }
     if (ev.target.closest('button[data-act="edit"]')) { closeStat(); return; }
@@ -6823,7 +6885,7 @@
 <div class="modal" id="savModal"><div class="modal-box stat-box">
   <div class="stat-fixed">
     <div class="stat-head"><h2>💰 সঞ্চয়</h2><button type="button" class="pop-x" id="savClose" aria-label="বন্ধ করুন">✕</button></div>
-    <div class="sd-stats"><div class="stat"><div class="label">মোট সঞ্চয়</div><div class="value" id="savModalTotal" style="color:#1f9d6b">৳ 0</div></div><div class="stat"><div class="label">মোট জমা</div><div class="value" id="savModalIn" style="color:#1f9d6b">৳ 0</div></div><div class="stat"><div class="label">মোট উত্তোলন</div><div class="value" id="savModalOut" style="color:#ef4444">৳ 0</div></div></div>
+    <div class="sd-stats"><div class="stat"><div class="label">মোট সঞ্চয়</div><div class="value" id="savModalTotal" style="color:#1f9d6b">৳ 0</div></div><div class="stat click" id="savInBtn" role="button" tabindex="0" style="cursor:pointer"><div class="label">মোট জমা</div><div class="value" id="savModalIn" style="color:#1f9d6b">৳ 0</div><small class="tap" style="display:block;margin-top:2px;font-size:.72rem;color:var(--muted)">বিস্তারিত ›</small></div><div class="stat click" id="savOutBtn" role="button" tabindex="0" style="cursor:pointer"><div class="label">মোট উত্তোলন</div><div class="value" id="savModalOut" style="color:#ef4444">৳ 0</div><small class="tap" style="display:block;margin-top:2px;font-size:.72rem;color:var(--muted)">বিস্তারিত ›</small></div></div>
     <div class="ochips" id="savViews" style="margin:8px 0 0;"></div>
   </div>
   <div class="stat-scroll" id="savScroll">
@@ -6842,6 +6904,18 @@
   </div>
     <div id="savList"></div>
   </div>
+</div></div>
+<style>
+  #savDetModal .stat-head { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 10px; }
+  #savDetModal .stat-head h2 { flex: 1 1 auto; min-width: 0; margin: 0; text-align: left; }
+  #savDetModal .stat-head .pop-x { flex: 0 0 auto; margin-left: auto; order: 2; position: static; }
+</style>
+<div class="modal" id="savDetModal" style="z-index:210;"><div class="modal-box stat-box">
+  <div class="stat-fixed">
+    <div class="stat-head"><h2 id="savDetTitle">💰 জমা</h2><button type="button" class="pop-x" id="savDetClose" aria-label="বন্ধ করুন">✕</button></div>
+    <div class="sd-stats" id="savDetStats"></div>
+  </div>
+  <div class="stat-scroll" id="savDetBody"></div>
 </div></div>
 <script>
 (function () {
@@ -6982,6 +7056,41 @@
     else armed = id;
     render();
   });
+  /* মোট জমা / মোট উত্তোলন কার্ডে চাপলে সব তথ্যের পপআপ */
+  function openSavDet(kind) {
+    load();
+    var w = kind === 'w';
+    var items = sortL(list.filter(function (x) { return w ? x.type === 'w' : x.type !== 'w'; }));
+    var total = 0, big = 0, days = {};
+    items.forEach(function (x) { total += x.amount; if (x.amount > big) big = x.amount; days[x.date] = 1; });
+    var col = w ? '#ef4444' : '#1f9d6b';
+    $('savDetTitle').textContent = w ? '🔻 মোট উত্তোলন — বিস্তারিত' : '💰 মোট জমা — বিস্তারিত';
+    function card(l, v, c) { return '<div class="stat"><div class="label">' + l + '</div><div class="value"' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</div></div>'; }
+    $('savDetStats').innerHTML = card('মোট', fmt(total), col) + card('লেনদেন', items.length + 'টি') +
+      card('গড় প্রতি লেনদেন', items.length ? fmt(total / items.length) : '—') + card('সবচেয়ে বড়', items.length ? fmt(big) : '—');
+    if (!items.length) {
+      $('savDetBody').innerHTML = '<div class="empty">' + (w ? 'এখনো কোনো উত্তোলন নেই' : 'এখনো কোনো জমা নেই') + '</div>';
+    } else {
+      var rows = items.map(function (x) {
+        return '<tr><td>' + esc(x.date) + '</td><td>' + WD[dowOf(x.date)] + '</td><td>' + (x.note ? esc(x.note) : '<small>নোট নেই</small>') +
+          '</td><td class="amt" style="color:' + col + '">' + (w ? '− ' : '+ ') + fmt(x.amount) + '</td></tr>';
+      }).join('');
+      $('savDetBody').innerHTML = '<h3 class="sd-h">📋 সব ' + (w ? 'উত্তোলন' : 'জমা') + ' (' + items.length + ')</h3>' +
+        '<div class="table-wrap"><table class="sd-tbl"><thead><tr><th>তারিখ</th><th>বার</th><th>নোট</th><th>টাকা</th></tr></thead><tbody>' + rows +
+        '</tbody><tfoot><tr><th colspan="2">সর্বমোট (' + Object.keys(days).length + ' দিন)</th><th>' + items.length + 'টি</th><th style="color:' + col + '">' + fmt(total) + '</th></tr></tfoot></table></div>';
+    }
+    $('savDetBody').scrollTop = 0;
+    $('savDetModal').className = 'modal show';
+  }
+  function closeSavDet() { $('savDetModal').className = 'modal'; }
+  [['savInBtn', 'd'], ['savOutBtn', 'w']].forEach(function (p) {
+    var el = $(p[0]); if (!el) return;
+    el.addEventListener('click', function () { openSavDet(p[1]); });
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSavDet(p[1]); } });
+  });
+  $('savDetClose').addEventListener('click', closeSavDet);
+  $('savDetModal').addEventListener('click', function (e) { if (e.target === this) closeSavDet(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('savDetModal').className.indexOf('show') >= 0) { e.stopPropagation(); closeSavDet(); } }, true);
   window.__savReload = function () { load(); render(); };
   load(); render();
 })();
@@ -8418,6 +8527,30 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   var pL = window.__sfDemoLoad, pC = window.__sfDemoClear;
   window.__sfDemoLoad = function () { try { if (pL) pL(); } catch (e) {} try { nDemoLoad(); } catch (e) {} };
   window.__sfDemoClear = function () { try { if (pC) pC(); } catch (e) {} try { nDemoClear(); } catch (e) {} };
+})();
+</script>
+<style>
+  .dwrap { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .dwrap input[type="date"] { width: 100%; }
+  .dwd { color: var(--pink, #d63384); font-weight: 700; font-size: 0.9rem; padding-left: 4px; min-height: 1.1em; }
+</style>
+<script>
+(function () {
+  var WDN = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
+  function upd(p) {
+    var inp = document.getElementById(p + 'Date'), lb = document.getElementById(p + 'Wd');
+    if (!inp || !lb) return;
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(inp.value || ''), t = '';
+    if (m) { var d = new Date(+m[1], +m[2] - 1, +m[3]); if (!isNaN(d)) t = '🗓️ ' + WDN[d.getDay()]; }
+    if (lb.textContent !== t) lb.textContent = t;
+  }
+  ['income', 'expense'].forEach(function (p) {
+    var inp = document.getElementById(p + 'Date');
+    if (inp) ['input', 'change'].forEach(function (ev) { inp.addEventListener(ev, function () { upd(p); }); });
+    upd(p);
+  });
+  /* কোড দিয়ে তারিখ বসালে (নতুন ফর্ম / এডিট) ইভেন্ট আসে না — তাই হালকা পোলিং */
+  setInterval(function () { upd('income'); upd('expense'); }, 250);
 })();
 </script>
 </body>
