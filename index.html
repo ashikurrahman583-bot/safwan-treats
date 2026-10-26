@@ -6255,12 +6255,27 @@
       var a = res.a, del = a[2] || {};
       var dead = function (k, id, u) { var t = del[k] && del[k][id]; return !!t && num(t) >= num(u); };
       var entries = toArr(a[0]).filter(function (e) { return e && e.id != null && !dead('e', e.id, e.u); });
-      var orders = toArr(a[1]).filter(function (o) { return o && o.id != null && !dead('o', o.id, o.u); });
-      var customers = toArr(a[4]).filter(function (c) { return c && c.id != null && !dead('c', c.id, c.u); });
+      /* Firebase-এ খালি array ([]) পুশ করলে সেই key-ই সেভ হয় না, তাই raw ক্লাউড ডেটায় pph/cph/photos
+         অনুপস্থিত থাকতে পারে — normalize করে সবসময় (খালি হলেও) এই ফিল্ডগুলো ফেরত দেওয়া হয় */
+      var orders = toArr(a[1]).filter(function (o) { return o && o.id != null && !dead('o', o.id, o.u); }).map(normalizeOrder).filter(Boolean);
+      var customers = toArr(a[4]).filter(function (c) { return c && c.id != null && !dead('c', c.id, c.u); }).map(normalizeCustomer).filter(Boolean);
       var savings = toArr(a[5]).map(normSav).filter(function (x) { return x && !dead('s', x.id, x.u); });
-      var trash = toArr(a[6]).filter(Boolean);
+      var trash = toArr(a[6]).filter(Boolean).map(function (x) {
+        if (!x || typeof x !== 'object' || !x.kind || !x.data) return x;
+        var d = x.kind === 'entry' ? normalizeEntry(x.data) : x.kind === 'order' ? normalizeOrder(x.data) : x.kind === 'cake' ? normCakeBin(x.data) : x.kind === 'customer' ? normalizeCustomer(x.data) : null;
+        if (!d) return x;
+        var o = { tid: x.tid, kind: x.kind, data: d, label: String(x.label == null ? '' : x.label), at: Number(x.at) || 0 };
+        if (x.extra && typeof x.extra === 'object') o.extra = { pays: toArr(x.extra.pays).map(normalizeEntry).filter(Boolean), detached: toArr(x.extra.detached).map(Number).filter(function (n) { return isFinite(n) && n; }) };
+        return o;
+      });
       var cd = a[8] || {};
-      var cakes = toArr(a[7]).filter(function (x) { return x && isFinite(Number(x.amount)) && !cd[x.id] && !isDemoCake(x); });
+      var ckSeen = {};
+      var cakes = toArr(a[7]).filter(function (x) {
+        if (!x || !isFinite(Number(x.amount)) || cd[x.id] || isDemoCake(x)) return false;
+        var k = [String(x.name || '').trim(), Number(x.amount) || 0, String(x.items || '').trim()].join('|');
+        if (ckSeen[k]) return false; /* একই হিসাব পুরনো বাগের কারণে আলাদা id-তে ডুপ্লিকেট হয়ে থাকলে, এখানে একবারই রাখা হয় */
+        ckSeen[k] = 1; return true;
+      });
       var by = {};
       res.memos.sort(function (x, y) { return num(x.t) - num(y.t); }).forEach(function (r) { (by[r.eid] = by[r.eid] || []).push(r.data); });
       var nMemo = 0;
@@ -7721,6 +7736,16 @@
       });
       if (ing.length) { x.ing = ing; ch = true; }
     });
+    /* একই হিসাব (নাম+পরিমাণ+উপকরণ) একাধিকবার আলাদা id-তে থাকলে — আগের বাগের কারণে এমন হতে পারত —
+       একটা রেখে বাকিগুলো সরানো হয় ও cakeDel-এ যোগ হয় যাতে ক্লাউড থেকেও মুছে যায় */
+    var seen = {}, kept = [];
+    totals.forEach(function (x) {
+      if (String(x.id || '').indexOf('ctdemo') === 0) { kept.push(x); return; }
+      var k = [String(x.name || '').trim(), Number(x.amount) || 0, String(x.items || '').trim()].join('|');
+      if (seen[k]) { cakeDelAdd(x.id); ch = true; return; }
+      seen[k] = 1; kept.push(x);
+    });
+    if (kept.length !== totals.length) { totals = kept; ch = true; }
     if (ch) { try { localStorage.setItem(TKEY, JSON.stringify(totals)); } catch (e) {} }
   }
   function saveTotals() { try { localStorage.setItem(TKEY, JSON.stringify(totals)); } catch (e) {} }
@@ -7783,7 +7808,9 @@
     if (replace) {
       totals = totals.filter(function (x) { if (isDemoTotal(x)) return true; cakeDelAdd(x.id); return false; });
     }
-    var sig = function (x) { return [x.name, x.amount, x.ts || x.date, x.items].join('|'); };
+    /* তারিখ/সময় (ts/date/u) বাদ দিয়ে শুধু নাম+পরিমাণ+উপকরণ মিলিয়ে signature — আগে ts থাকা/না-থাকার তফাতে
+       একই হিসাব "নতুন" ধরে নিয়ে ডুপ্লিকেট আইডি দিয়ে ফেলত, সেটা ঠেকানোর জন্য */
+    var sig = function (x) { return [String(x.name || '').trim(), Number(x.amount) || 0, String(x.items || '').trim()].join('|'); };
     var have = {}, haveSig = {};
     totals.forEach(function (x) { have[String(x.id)] = 1; haveSig[sig(x)] = 1; });
     cleaned.forEach(function (c) {
