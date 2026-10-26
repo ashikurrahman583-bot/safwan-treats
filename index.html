@@ -4008,15 +4008,23 @@
     new MutationObserver(function (recs) {
       var els = [];
       recs.forEach(function (r) { var t = r.target; if (t && t.classList && t.classList.contains('modal') && els.indexOf(t) < 0) els.push(t); });
+      var opened = [], closed = [];
       els.forEach(function (m) {
         var idx = modalLayers.indexOf(m);
-        if (modalIsOpen(m)) {
-          if (idx < 0) { try { history.pushState({ modal: 1 }, ''); modalLayers.push(m); } catch (e) {} }
-        } else if (idx >= 0) {
-          modalLayers.splice(idx, 1);
-          try { histBack(); } catch (e) {}
-        }
+        if (modalIsOpen(m)) { if (idx < 0) opened.push(m); }
+        else if (idx >= 0) closed.push(m);
       });
+      if (!opened.length && !closed.length) return;
+      /* একই ব্যাচে একটা মোডাল বন্ধ হয়ে সাথে সাথে আরেকটা খুললে (যেমন ক্লাউড সিঙ্কের সময় সিঙ্ক-মোডাল বন্ধ হয়ে
+         মার্জ-চয়েস মোডাল খোলা) — history.back() (async) আর history.pushState() (sync) একসাথে ডাকলে রেস
+         কন্ডিশনে আসল ব্রাউজার হিস্টোরি থেকে বেশি ধাপ পিছিয়ে যেতে পারত, যার ফলে পুরো ট্যাব/উইন্ডো বন্ধ হয়ে যেত।
+         তাই একই ব্যাচের বন্ধ+খোলা জোড়া মিলিয়ে বাদ দেওয়া হয় — শুধু নেট পরিবর্তনেই ব্রাউজার হিস্টোরি ছোঁয়া হয়। */
+      var pairs = Math.min(opened.length, closed.length);
+      closed.forEach(function (m) { var idx = modalLayers.indexOf(m); if (idx >= 0) modalLayers.splice(idx, 1); });
+      opened.forEach(function (m) { modalLayers.push(m); });
+      var i;
+      for (i = 0; i < closed.length - pairs; i++) { try { histBack(); } catch (e) {} }
+      for (i = 0; i < opened.length - pairs; i++) { try { history.pushState({ modal: 1 }, ''); } catch (e) {} }
     }).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
     window.addEventListener('popstate', function (ev) {
       if (eatBackSkip()) { ev.stopImmediatePropagation(); return; }
