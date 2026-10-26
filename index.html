@@ -884,6 +884,9 @@
   .sync-status { border-radius: 12px; padding: 10px 12px; font-size: 0.9rem; margin-bottom: 10px; background: var(--card-2); border: 1px solid var(--border); line-height: 1.6; }
   .sync-status.ok { border-color: var(--green); }
   .sync-status.err { border-color: var(--red); color: var(--red); }
+  .sync-bar { height: 9px; border-radius: 99px; background: var(--border); overflow: hidden; margin: 8px 0 4px; }
+  .sync-bar > i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--green); transition: width .25s ease; }
+  .sync-pct { font-weight: 700; }
   .sync-box details { margin: 12px 0; background: var(--card-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 0.88rem; line-height: 1.75; }
   .sync-box summary { cursor: pointer; font-weight: 600; color: var(--heading); }
   .sync-box ol { padding-left: 20px; margin-top: 6px; }
@@ -5540,7 +5543,7 @@
      ===================================================== */
   var APP_VERSION = '2026-10-26.5'; /* কোড বদলালে এটা বাড়ান — সিঙ্ক উইন্ডোতে দেখা যায় */
   var syncCfg = { url: '', code: '', on: false, last: 0, snap: '' };
-  var syncState = { busy: false, again: false, status: 'off', msg: '', cloudVer: '' };
+  var syncState = { busy: false, again: false, status: 'off', msg: '', cloudVer: '', pct: 0, stage: '' };
   var syncTimer = null;
   var pendingChoice = null;
 
@@ -5783,24 +5786,25 @@
           });
         }).then(function (loc) {
           var chain = Promise.resolve();
+          var tot = 0, dn = 0, tick = function () { dn++; try { if (window.__syncProgress) window.__syncProgress(dn, tot); } catch (e) {} };
           Object.keys(loc).forEach(function (m) {
-            if (rt[m]) { chain = chain.then(function () { changed = true; return memoReq('readwrite', function (os) { return os.delete(loc[m]); }); }); }
-            else if (!rm[m]) {
+            if (rt[m]) { tot++; chain = chain.then(function () { changed = true; return memoReq('readwrite', function (os) { return os.delete(loc[m]); }); }).then(tick); }
+            else if (!rm[m]) { tot++;
               chain = chain.then(function () { return memoReq('readonly', function (os) { return os.get(loc[m]); }); })
-                .then(function (r) { if (r && !dem[r.eid] && valid[r.eid]) return J(base + '/memos/' + m + '.json', 'PUT', { eid: r.eid, data: r.data, t: r.t || 0 }); });
-            } else if (hasDem) {
+                .then(function (r) { if (r && !dem[r.eid] && valid[r.eid]) return J(base + '/memos/' + m + '.json', 'PUT', { eid: r.eid, data: r.data, t: r.t || 0 }); }).then(tick);
+            } else if (hasDem) { tot++;
               /* আগে ভুলে ক্লাউডে চলে যাওয়া ডেমো ছবি ক্লাউড থেকে মুছে ফেলা */
               chain = chain.then(function () { return memoReq('readonly', function (os) { return os.get(loc[m]); }); })
-                .then(function (r) { if (r && dem[r.eid]) return J(base + '/memos/' + m + '.json', 'DELETE'); });
+                .then(function (r) { if (r && dem[r.eid]) return J(base + '/memos/' + m + '.json', 'DELETE'); }).then(tick);
             }
           });
           Object.keys(rm).forEach(function (m) {
             if (loc[m] || rt[m]) return;
-            chain = chain.then(function () { return J(base + '/memos/' + m + '.json', 'GET'); }).then(function (r) {
+            tot++; chain = chain.then(function () { return J(base + '/memos/' + m + '.json', 'GET'); }).then(function (r) {
               if (!r || !r.data || !(entries.some(function (e) { return e.id === r.eid; }) || orders.some(function (o) { return o.id === r.eid; }))) return;
               changed = true;
               return memoReq('readwrite', function (os) { return os.add({ eid: r.eid, data: r.data, t: r.t || 0, mid: m }); });
-            });
+            }).then(tick);
           });
           return chain;
         });
@@ -6038,10 +6042,19 @@
     syncState.status = s; syncState.msg = msg || '';
     var b = $('cloudBtn');
     /* বাটনের লেখা: ডেমো চালু → “ডেমো চালু”; নয়তো সিঙ্ক চালু → “সিঙ্ক ✓”; কোনোটাই না → “ক্লাউড” (সিঙ্ক চলার সময় ও ত্রুটি হলে সেটাই দেখায়) */
-    b.textContent = (syncCfg.on && s === 'busy') ? '☁️ সিঙ্ক হচ্ছে…' : (syncCfg.on && s === 'err') ? '☁️ ⚠ সমস্যা' : demoOn() ? '☁️ ডেমো চালু' : syncCfg.on ? '☁️ সিঙ্ক ✓' : '☁️ ক্লাউড';
+    b.textContent = (syncCfg.on && s === 'busy') ? '☁️ সিঙ্ক হচ্ছে… ' + (syncState.pct || 0) + '%' : (syncCfg.on && s === 'err') ? '☁️ ⚠ সমস্যা' : demoOn() ? '☁️ ডেমো চালু' : syncCfg.on ? '☁️ সিঙ্ক ✓' : '☁️ ক্লাউড';
     b.title = s === 'err' ? msg : '';
     paintSyncModal();
   }
+  /* সিঙ্কের অগ্রগতি (%) — ধাপ অনুযায়ী বাড়ে */
+  function setProg(p, label) {
+    p = Math.max(0, Math.min(100, Math.round(p)));
+    if (p < syncState.pct) p = syncState.pct;
+    syncState.pct = p;
+    if (label) syncState.stage = label;
+    if (syncState.status === 'busy') setStatus('busy');
+  }
+  window.__syncProgress = function (d, t) { setProg(50 + 35 * (t ? d / t : 1), 'ছবি সিঙ্ক হচ্ছে: ' + d + '/' + t); };
   function lastText() {
     if (!syncCfg.last) return '';
     var d = new Date(syncCfg.last);
@@ -6052,7 +6065,7 @@
     if (!el) return;
     var s = syncState.status, cls = 'sync-status', txt;
     if (!syncCfg.on) txt = '⚪ ক্লাউড সিঙ্ক বন্ধ আছে।' + (demoOn() ? '<br>🧪 ডেমো ডেটা চালু আছে — সিঙ্ক শুরুর আগে নিচের বাটনে ডেমো ডেটা বন্ধ করে নিন।' : '');
-    else if (s === 'busy') txt = '🔄 সিঙ্ক হচ্ছে…';
+    else if (s === 'busy') { var pc = syncState.pct || 0; txt = '🔄 সিঙ্ক হচ্ছে… <span class="sync-pct">' + pc + '%</span><div class="sync-bar"><i style="width:' + pc + '%"></i></div>'; }
     else if (s === 'err') { cls += ' err'; txt = '⚠️ ' + esc(syncState.msg) + (syncCfg.last ? '<br>' + lastText() : ''); }
     else if (demoOn()) { txt = '🧪 ডেমো ডেটা চালু আছে — ডেমো ডেটা ক্লাউডে যায় না, শুধু এই ডিভাইসে দেখা যাচ্ছে।<br>ডেমো মুছে ফেললে সিঙ্ক আবার স্বাভাবিক দেখাবে।' + (syncCfg.last ? '<br>' + lastText() : ''); }
     else { cls += ' ok'; txt = '✅ সিঙ্ক চালু আছে — প্রতিটি পরিবর্তন নিজে থেকেই ক্লাউডে যাবে।<br>' + lastText(); }
@@ -6078,12 +6091,14 @@
     if (!syncCfg.on) return Promise.resolve();
     if (syncState.busy) { syncState.again = true; return Promise.resolve(); }
     syncState.busy = true;
+    syncState.pct = 0; syncState.stage = 'ক্লাউড থেকে ডেটা আনা হচ্ছে';
     setStatus('busy');
     var getter = (opts && opts.remote !== undefined) ? Promise.resolve(opts.remote) : cloudGet();
     return getter.then(function (remote) {
+      setProg(15, 'ক্লাউডের কপি জমানো হচ্ছে');
       syncState.cloudVer = (remote && typeof remote.app === 'string') ? remote.app : '';
       /* ক্লাউডে কিছু লেখার আগে আজকের কপি জমানো — ব্যর্থ হলেও সিঙ্ক চলবে */
-      return cloudSnapshot(remote).catch(function () {}).then(function () { return remote; });
+      return cloudSnapshot(remote).catch(function () {}).then(function () { setProg(30, 'ডেটা মেলানো হচ্ছে'); return remote; });
     }).then(function (remote) {
       if (!remote || (!remote.entries && !remote.orders && !remote.del && !remote.savings && !remote.trash)) return cloudPut(buildPayload());
       var r = parseRemote(remote);
@@ -6091,13 +6106,16 @@
       var res = applyMerge(r);
       persistLocal();
       if (res.localChanged) refreshAfterMerge();
-      if (res.pushNeeded) return cloudPut(buildPayload());
+      if (res.pushNeeded) { setProg(40, 'ক্লাউডে পাঠানো হচ্ছে'); return cloudPut(buildPayload()); }
     }).then(function () {
+      setProg(50, 'ছবি সিঙ্ক হচ্ছে');
       return memoSync().catch(function (e) { if (manual) toast('⚠️ ছবি সিঙ্ক হয়নি: ' + cloudErr(e)); });
     }).then(function () {
+      setProg(88, 'কেকের খরচ সিঙ্ক হচ্ছে');
       return cakeSync().catch(function (e) { if (manual) toast('⚠️ কেকের খরচ সিঙ্ক হয়নি: ' + cloudErr(e)); });
     }).then(function () {
       syncCfg.last = Date.now(); saveSyncCfg();
+      syncState.pct = 100;
       setStatus('ok');
       if (manual) toast('☁️ সিঙ্ক সম্পন্ন');
     }).catch(function (e) {
