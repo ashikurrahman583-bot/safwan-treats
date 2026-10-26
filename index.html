@@ -7033,7 +7033,7 @@
   /* ---------- সকল ডেটা মুছুন ---------- */
   function wipeAllData() {
     var keep = { safwanTreatsTheme: 1, safwanTreatsView: 1, safwanTreatsLang: 1, safwanTreatsSync_v1: 1 };
-    function isData(k) { return !!k && !keep[k] && (k.indexOf('safwanTreats') === 0 || k.indexOf('bazaar') === 0 || k.indexOf('khoroch-hisab') === 0); }
+    function isData(k) { return !!k && !keep[k] && (k.indexOf('safwanTreats') === 0 || k.indexOf('bazaar') === 0 || k.indexOf('khoroch-hisab') === 0 || k.indexOf('notes:') === 0); }
     var ks = [], i, k;
     try { for (i = 0; i < localStorage.length; i++) { k = localStorage.key(i); if (isData(k)) ks.push(k); } } catch (e) {}
     /* রিলোডের আগে পুরনো মেমরির ডেটা আবার সেভ হয়ে যাওয়া ঠেকানো */
@@ -7065,7 +7065,7 @@
   $('bkWipeAll').addEventListener('click', function () {
     closeM('bkModal');
     var cloud = false;
-    try { var so = JSON.parse(localStorage.getItem('safwanTreatsSync_v1') || '{}'); cloud = !!(so && so.url && so.code); } catch (e) {}
+    try { var so = JSON.parse(localStorage.getItem('safwanTreatsSync_v1') || '{}'); cloud = !!(so && so.on && so.url && so.code); } catch (e) {}
     if (cloud) {
       askChoice('☁️ ক্লাউড চালু আছে', 'সকল ডেটা মুছতে হলে <b>আগে ক্লাউড বন্ধ করুন</b>, তারপর আবার চেষ্টা করুন।<br><small>(উপরের “☁️ ক্লাউড” বাটন থেকে সিঙ্ক বন্ধ করা যাবে।)</small>', [{ t: 'ঠিক আছে' }]);
       return;
