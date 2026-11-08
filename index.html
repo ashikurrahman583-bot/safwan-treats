@@ -4267,7 +4267,9 @@
   }
   function orderText(o) {
     var v = ordView(o, paidMap());
-    var t = (o.no ? '🔢 অর্ডার নং: ' + ordNo(o) + '\n' : '') + '👤 নাম: ' + o.customer + '\n';
+    var t = '';
+    if (o.status !== 'cancelled' && v.bal > 0) t += '⚠️ সাফওয়ান ট্রিটস থেকে স্মরণ করিয়ে দিচ্ছি: আপনার কাছে আমাদের ' + fmt(v.bal) + ' বকেয়া আছে। অনুগ্রহ করে দ্রুত পরিশোধ করার অনুরোধ রইল। ধন্যবাদ। 🙏\n\n';
+    t += (o.no ? '🔢 অর্ডার নং: ' + ordNo(o) + '\n' : '') + '👤 নাম: ' + o.customer + '\n';
     if (o.phone) t += '📞 ফোন: ' + o.phone + '\n';
     t += '🍰 অর্ডার: ' + o.item + '\n🗓️ ডেলিভারি: ' + o.delivery + ' (' + WD[dow(o.delivery)] + ')' + (o.time ? ', ' + fmtTime(o.time) : '') + '\n';
     if (o.addr) t += '📍 ঠিকানা: ' + o.addr + '\n';
